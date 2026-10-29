@@ -57,8 +57,9 @@ This package replaces [django-partial-date](https://github.com/ktowen/django_par
 has had no release since January 2022. That package stores a partial date as a timestamp with
 the precision held in its seconds. [python-edtf](https://github.com/ixc/python-edtf) implements
 the whole of EDTF and ships a Django field that needs four extra columns on every model for
-filtering and sorting. [docs/brainstorm.md](docs/brainstorm.md) compares them.
+filtering and sorting. [ADR 0001](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/adr/0001-store-partial-dates-as-iso-8601-strings.md) records how this package stores a
+partial date and why. [docs/brainstorm.md](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/brainstorm.md) compares them.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/FAIR-DM/django-partial-dates/blob/main/LICENSE).
