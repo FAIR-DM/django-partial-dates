@@ -25,7 +25,108 @@ the invented date from a recorded one.
 
 ## Status
 
-Pre-alpha. The package holds no field yet.
+Pre-alpha. The package holds a partial date value so far. The model field is not written yet.
+
+## Usage
+
+A `PartialDate` holds a year and, when they were recorded, a month and a day. A part that was
+not recorded is `None`.
+
+```python
+>>> from partial_dates import PartialDate, Precision
+>>> PartialDate(1990)
+PartialDate(year=1990, month=None, day=None)
+>>> PartialDate(1990, 6, 14)
+PartialDate(year=1990, month=6, day=14)
+```
+
+`PartialDate.fromisoformat` reads the three ISO forms, `YYYY`, `YYYY-MM` and `YYYY-MM-DD`, and
+nothing else. `isoformat()` writes the form back, and reading it gives an equal value.
+
+```python
+>>> value = PartialDate.fromisoformat("1990-06")
+>>> value == PartialDate(1990, 6)
+True
+>>> value.isoformat()
+'1990-06'
+>>> str(PartialDate(990))
+'0990'
+```
+
+The `precision` of a value says how much of it was recorded.
+
+```python
+>>> value.year, value.month, value.day
+(1990, 6, None)
+>>> value.precision is Precision.MONTH
+True
+```
+
+A value is immutable. Building or reading one that is not a date, such as a day without a month,
+`1990-02-30` or a year outside 0001 to 9999, raises `ValueError`.
+
+```python
+>>> PartialDate.fromisoformat("1990-6")
+Traceback (most recent call last):
+    ...
+ValueError: Not a partial date in ISO form: '1990-6'
+```
+
+Values sort in the order of their ISO forms, so a year comes before its months and a month before
+its days. Two values are equal when all their parts are equal: `1990` is not `1990-01-01`.
+
+```python
+>>> values = [
+...     PartialDate(1991),
+...     PartialDate(1990, 6, 14),
+...     PartialDate(1990),
+...     PartialDate(1990, 6),
+... ]
+>>> [value.isoformat() for value in sorted(values)]
+['1990', '1990-06', '1990-06-14', '1991']
+>>> PartialDate(1990) == PartialDate(1990, 1, 1)
+False
+```
+
+Values are hashable, so they work as set members and dictionary keys. A value is never equal to a
+`datetime.date`, a string or an integer, and ordering against one raises `TypeError`.
+
+```python
+>>> len({PartialDate(1990, 6), PartialDate.fromisoformat("1990-06")})
+1
+>>> counts = {PartialDate(1990, 6): 3}
+>>> counts[PartialDate.fromisoformat("1990-06")]
+3
+```
+
+A value covers a period. `start` and `end` give its first and last day as `datetime.date`
+objects, with the last day of February worked out for the year.
+
+```python
+>>> PartialDate(1990).start, PartialDate(1990).end
+(datetime.date(1990, 1, 1), datetime.date(1990, 12, 31))
+>>> PartialDate(2000, 2).end
+datetime.date(2000, 2, 29)
+>>> PartialDate(1990, 6, 14).start == PartialDate(1990, 6, 14).end
+True
+```
+
+`relation_to` says whether the period of one value is `Relation.BEFORE`, `Relation.AFTER` or
+`Relation.OVERLAPPING` the period of another. Sorting and "is this one earlier?" are different
+questions: `1990` sorts before `1990-06`, but the two overlap, so neither is earlier. Passing
+anything but a `PartialDate` raises `TypeError`.
+
+```python
+>>> from partial_dates import Relation
+>>> PartialDate(1990, 6).relation_to(PartialDate(1991)) is Relation.BEFORE
+True
+>>> PartialDate(1991).relation_to(PartialDate(1990, 6)) is Relation.AFTER
+True
+>>> PartialDate(1990).relation_to(PartialDate(1990, 6)) is Relation.OVERLAPPING
+True
+>>> PartialDate(1990) < PartialDate(1990, 6)
+True
+```
 
 ## Scope and philosophy
 

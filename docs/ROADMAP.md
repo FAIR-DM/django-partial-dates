@@ -28,7 +28,7 @@ Everything needed for FAIR-DM and django-literature to drop django-partial-date.
 
 ### R1 — A partial date value that tells the truth
 
-*feature · advances G2*
+*delivered in [#3](https://github.com/FAIR-DM/django-partial-dates/issues/3) · advances G2*
 
 Everything else is built on the value type, so it comes first. django-partial-date's value class
 compares wrongly across precisions, cannot be hashed, invents a day for a year-only date, and
