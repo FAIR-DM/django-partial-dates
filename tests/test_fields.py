@@ -1,6 +1,7 @@
 import datetime
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.db import DataError, IntegrityError, connection, transaction
 from django.db.migrations.writer import MigrationWriter
@@ -300,3 +301,21 @@ class TestRefusedWrites:
             Record.objects.bulk_update(rows, ["date"])
 
         assert self.values() == [PartialDate(1990, 1), PartialDate(1990, 2)]
+
+
+@pytest.mark.django_db
+class TestValidation:
+    def test_full_clean_reports_text_that_is_not_a_partial_date(self):
+        record = Record(date="1990-6")
+
+        with pytest.raises(ValidationError) as raised:
+            record.full_clean()
+
+        assert raised.value.error_dict["date"][0].code == "invalid"
+
+    def test_full_clean_leaves_a_partial_date_on_the_attribute(self):
+        record = Record(date="1990-06")
+
+        record.full_clean()
+
+        assert record.date == PartialDate(1990, 6)

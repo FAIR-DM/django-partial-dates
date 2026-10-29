@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.utils.translation import gettext_lazy as _
@@ -23,6 +24,8 @@ class PartialDateField(models.Field):
     Attributes:
         description: What the field holds, as Django shows it.
         empty_strings_allowed: `False`, so an empty value is `None`, never `""`.
+        default_error_messages: The `invalid` message, shown for text that is not a
+            partial date.
 
     Raises:
         TypeError: If `max_length` is passed.
@@ -30,6 +33,11 @@ class PartialDateField(models.Field):
 
     description = _("A date known to the year, the month or the day")
     empty_strings_allowed = False
+    default_error_messages = {
+        "invalid": _(
+            "\u201c%(value)s\u201d is not a date as YYYY, YYYY-MM or YYYY-MM-DD."
+        ),
+    }
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         if "max_length" in kwargs:
@@ -135,6 +143,31 @@ class PartialDateField(models.Field):
             `None`, or the partial date the text records.
         """
         return None if value is None else PartialDate.fromisoformat(value)
+
+    def to_python(self, value: Any) -> PartialDate | None:
+        """Turn a value into a partial date.
+
+        Args:
+            value: A `PartialDate`, its ISO text, `""` or `None`.
+
+        Returns:
+            `None` for `None` and `""`, otherwise the partial date the value names.
+
+        Raises:
+            ValidationError: With code `invalid`, if the value is not a partial date.
+        """
+        if value is None or value == "":
+            return None
+        if isinstance(value, PartialDate):
+            return value
+        try:
+            return PartialDate.fromisoformat(value)
+        except ValueError:
+            raise ValidationError(
+                self.error_messages["invalid"],
+                code="invalid",
+                params={"value": value},
+            ) from None
 
     def get_prep_value(self, value: Any) -> str | None:
         """Turn a value into the text stored in the column.
