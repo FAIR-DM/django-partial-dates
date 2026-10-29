@@ -1,0 +1,50 @@
+name: Publish
+
+# Publishes to PyPI when a release is published. The release itself is cut by
+# the Tag Release workflow once a release pull request from Prepare Release has
+# merged.
+#
+# Publishing uses PyPI trusted publishing, so no API token is stored here. PyPI
+# checks each upload against a trusted publisher registered for the project:
+# owner FAIR-DM, repository django-partial-dates, workflow publish.yml, environment pypi.
+# Until the project has one (a pending publisher, before the first release) this
+# workflow fails with `invalid-publisher`.
+#
+# A release created by a workflow with the default GITHUB_TOKEN does not start
+# other workflows, so Tag Release needs the RELEASE_TOKEN secret for its release
+# to reach this one. Without it, run this workflow by hand from the Actions tab.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/django-partial-dates/
+    permissions:
+      # Required for trusted publishing.
+      id-token: write
+      contents: read
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          python-version: '3.13'
+
+      # --check fails when uv.lock is out of date with pyproject.toml, so a
+      # release never ships from a tree whose lockfile disagrees with it.
+      - name: Build package
+        run: |
+          uv lock --check
+          uv build
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

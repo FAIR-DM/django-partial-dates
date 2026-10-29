@@ -1,0 +1,92 @@
+[project]
+name = "django-partial-dates"
+version = "0.0.1"
+description = "A Django model field for dates known to the year, the month or the day"
+authors = [{ name = "Sam Jennings" }]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.12"
+keywords = ["django", "date", "partial date", "precision", "ISO 8601", "EDTF", "research"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+# Django ("django>=5.2", the supported releases) is declared with the first module that
+# imports it. deptry fails a declared dependency nothing imports, so the skeleton has none.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/FAIR-DM/django-partial-dates"
+Repository = "https://github.com/FAIR-DM/django-partial-dates"
+Changelog = "https://github.com/FAIR-DM/django-partial-dates/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+# Shared toolchain bundle from django-mvp/shared, pinned to a release tag. Ships
+# ruff, mypy, deptry, pre-commit, pytest, pytest-django, coverage, django-stubs.
+dev = [
+    "mvp-shared[dev,test]",
+    # The pre-commit template runs pydoclint, which the bundle at v0.6.0 does not carry.
+    "pydoclint>=0.10.1",
+]
+
+[tool.uv.sources]
+mvp-shared = { git = "https://github.com/django-mvp/shared.git", tag = "v0.6.0" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["partial_dates"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/partial_dates", "/README.md", "/LICENSE"]
+
+[tool.mypy]
+files = ["partial_dates"]
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "tests.settings"
+
+[tool.ruff]
+extend = "ruff-base.toml"
+
+[tool.ruff.lint.extend-per-file-ignores]
+# S101: asserts are the point of a test. S105: the test settings carry a
+# placeholder SECRET_KEY.
+"tests/*" = ["S101", "S105"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config", "-ra"]
+
+[tool.coverage.run]
+branch = true
+source = ["partial_dates"]
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true
+
+[tool.deptry]
+extend_exclude = ["tests/", "docs/"]
