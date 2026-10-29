@@ -3,11 +3,13 @@
 import calendar
 import dataclasses
 import datetime
+import enum
 import operator
 
 import pytest
 
-from partial_dates import PartialDate, Precision
+import partial_dates
+from partial_dates import PartialDate, Precision, Relation
 
 
 class TestReadingTheIsoForm:
@@ -268,6 +270,85 @@ class TestPeriod:
         for value in every_value_in_years(1999, 2000):
             assert value.start <= value.end
             assert value.start.year == value.end.year == value.year
+
+
+def parts_known(value):
+    return 1 + (value.month is not None) + (value.day is not None)
+
+
+def is_earlier_at_the_coarser_precision(first, second):
+    known = min(parts_known(first), parts_known(second))
+    first_parts = (first.year, first.month, first.day)[:known]
+    second_parts = (second.year, second.month, second.day)[:known]
+    return first_parts < second_parts
+
+
+class TestRelation:
+    """Two periods are before, after or overlapping one another."""
+
+    def test_relation_is_a_string_enum_exported_by_the_package(self):
+        assert issubclass(Relation, enum.StrEnum)
+        assert Relation.BEFORE == "before"
+        assert Relation.AFTER == "after"
+        assert Relation.OVERLAPPING == "overlapping"
+        assert "Relation" in partial_dates.__all__
+
+    @pytest.mark.parametrize(
+        ("first", "second", "expected"),
+        [
+            (PartialDate(1990, 6), PartialDate(1991), Relation.BEFORE),
+            (PartialDate(1991), PartialDate(1990, 6), Relation.AFTER),
+            (PartialDate(1990), PartialDate(1990, 6), Relation.OVERLAPPING),
+            (PartialDate(1990, 6), PartialDate(1990), Relation.OVERLAPPING),
+            (PartialDate(1990, 6), PartialDate(1990, 6, 14), Relation.OVERLAPPING),
+            (PartialDate(1990, 6, 14), PartialDate(1990, 6), Relation.OVERLAPPING),
+            (PartialDate(1990, 6), PartialDate(1990, 6), Relation.OVERLAPPING),
+            (PartialDate(1990), PartialDate(1990), Relation.OVERLAPPING),
+            (PartialDate(1990, 6, 30), PartialDate(1990, 7), Relation.BEFORE),
+            (PartialDate(1990, 7), PartialDate(1990, 6, 30), Relation.AFTER),
+        ],
+    )
+    def test_relation_to_names_how_the_periods_sit(self, first, second, expected):
+        assert first.relation_to(second) is expected
+
+    @pytest.mark.parametrize(
+        "other",
+        [datetime.date(1990, 6, 14), "1990-06-14", None],
+        ids=["date", "str", "none"],
+    )
+    def test_relation_to_another_type_raises_type_error(self, other):
+        with pytest.raises(TypeError):
+            PartialDate(1990, 6, 14).relation_to(other)
+
+    def test_before_and_after_mirror_each_other_over_every_pair(self):
+        mirror = {
+            Relation.BEFORE: Relation.AFTER,
+            Relation.AFTER: Relation.BEFORE,
+            Relation.OVERLAPPING: Relation.OVERLAPPING,
+        }
+        values = pair_sample()
+
+        for left in values:
+            for right in values:
+                assert right.relation_to(left) is mirror[left.relation_to(right)]
+
+    def test_each_relation_agrees_with_the_periods_over_every_pair(self):
+        values = pair_sample()
+
+        for left in values:
+            for right in values:
+                relation = left.relation_to(right)
+                assert (relation is Relation.BEFORE) == (left.end < right.start)
+                shares_a_day = left.start <= right.end and right.start <= left.end
+                assert (relation is Relation.OVERLAPPING) == shares_a_day
+
+    def test_before_agrees_with_the_coarser_precision_rule_over_every_pair(self):
+        values = pair_sample()
+
+        for left in values:
+            for right in values:
+                before = left.relation_to(right) is Relation.BEFORE
+                assert before == is_earlier_at_the_coarser_precision(left, right)
 
 
 class TestBuilding:

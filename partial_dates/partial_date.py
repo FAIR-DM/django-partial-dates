@@ -22,6 +22,14 @@ class Precision(enum.StrEnum):
     DAY = "day"
 
 
+class Relation(enum.StrEnum):
+    """How the period of one partial date sits against the period of another."""
+
+    BEFORE = "before"
+    AFTER = "after"
+    OVERLAPPING = "overlapping"
+
+
 @dataclass(frozen=True, slots=True)
 class PartialDate:
     """A date known to the year, to the month or to the day.
@@ -214,3 +222,28 @@ class PartialDate:
         return datetime.date(
             self.year, month, self.day or calendar.monthrange(self.year, month)[1]
         )
+
+    def relation_to(self, other: object) -> Relation:
+        """Say whether the period of this date is before, after or overlaps another.
+
+        This is not the same question as sorting: ``1990`` sorts before ``1990-06``,
+        but the two overlap.
+
+        Args:
+            other: The partial date to compare with.
+
+        Returns:
+            ``Relation.BEFORE`` when this period ends before the other starts,
+            ``Relation.AFTER`` when it starts after the other ends, and
+            ``Relation.OVERLAPPING`` when the two share a day.
+
+        Raises:
+            TypeError: ``other`` is not a partial date.
+        """
+        if not isinstance(other, PartialDate):
+            raise TypeError(f"Expected a PartialDate, not {other!r}")
+        if self.end < other.start:
+            return Relation.BEFORE
+        if self.start > other.end:
+            return Relation.AFTER
+        return Relation.OVERLAPPING

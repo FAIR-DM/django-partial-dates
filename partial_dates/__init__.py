@@ -2,8 +2,8 @@
 
 from importlib.metadata import version
 
-from partial_dates.partial_date import PartialDate, Precision
+from partial_dates.partial_date import PartialDate, Precision, Relation
 
 __version__ = version("django-partial-dates")
 
-__all__ = ["PartialDate", "Precision", "__version__"]
+__all__ = ["PartialDate", "Precision", "Relation", "__version__"]
