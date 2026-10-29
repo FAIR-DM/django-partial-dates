@@ -90,3 +90,8 @@ show_missing = true
 
 [tool.deptry]
 extend_exclude = ["tests/", "docs/"]
+
+[tool.forge.conformance]
+# tests/test_init.py tests the package's top-level module, partial_dates/__init__.py, which the
+# mirror rule cannot name.
+non-mirror-paths = ["tests/test_init.py"]

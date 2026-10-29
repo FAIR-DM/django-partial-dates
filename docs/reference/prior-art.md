@@ -1,10 +1,10 @@
-# Brainstorm
+# Prior art
 
-Working notes from before the package was built: the packages that already exist, why none of
-them is used, and what this package must not repeat. These are notes, not decisions. The storage
-decision is recorded in `docs/adr/`.
+The packages that already store partial dates in Django, why none of them is used, and what this
+package must not repeat. The storage decision itself is
+[ADR 0001](../adr/0001-store-partial-dates-as-iso-8601-strings.md).
 
-## Prior art
+## Existing packages
 
 | Package | Last release | Storage | Why not use it |
 |---|---|---|---|
@@ -46,4 +46,4 @@ Every one of these is a defect this package must not repeat.
 | A timestamp with the precision in its seconds, as django-partial-date does | Rejected. It stores a day and a month nobody recorded, and brings the time zone into date lookups. |
 | A date column and a precision column | Rejected. Django has no field spanning two columns, so it needs a hidden companion field. |
 | A start date and an end date, or a PostgreSQL `daterange` | Rejected. It presents an uncertain date as a certain interval, and a `daterange` works only on PostgreSQL. |
-| The ISO 8601 string in one text column | Chosen. The ADR records why. |
+| The ISO 8601 string in one text column | Chosen. ADR 0001 records why. |
