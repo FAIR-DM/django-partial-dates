@@ -20,3 +20,6 @@ else:
         "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}
     }
 USE_TZ = True
+# Django 6.0 made BigAutoField the default. Naming it keeps the test migration the
+# same on Django 5.2.
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
