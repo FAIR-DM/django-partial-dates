@@ -25,7 +25,52 @@ the invented date from a recorded one.
 
 ## Status
 
-Pre-alpha. The package holds no field yet.
+Pre-alpha. The package holds a partial date value so far. The model field is not written yet.
+
+## Usage
+
+A `PartialDate` holds a year and, when they were recorded, a month and a day. A part that was
+not recorded is `None`.
+
+```python
+>>> from partial_dates import PartialDate, Precision
+>>> PartialDate(1990)
+PartialDate(year=1990, month=None, day=None)
+>>> PartialDate(1990, 6, 14)
+PartialDate(year=1990, month=6, day=14)
+```
+
+`PartialDate.fromisoformat` reads the three ISO forms, `YYYY`, `YYYY-MM` and `YYYY-MM-DD`, and
+nothing else. `isoformat()` writes the form back, and reading it gives an equal value.
+
+```python
+>>> value = PartialDate.fromisoformat("1990-06")
+>>> value == PartialDate(1990, 6)
+True
+>>> value.isoformat()
+'1990-06'
+>>> str(PartialDate(990))
+'0990'
+```
+
+The `precision` of a value says how much of it was recorded.
+
+```python
+>>> value.year, value.month, value.day
+(1990, 6, None)
+>>> value.precision is Precision.MONTH
+True
+```
+
+A value is immutable. Building or reading one that is not a date, such as a day without a month,
+`1990-02-30` or a year outside 0001 to 9999, raises `ValueError`.
+
+```python
+>>> PartialDate.fromisoformat("1990-6")
+Traceback (most recent call last):
+    ...
+ValueError: Not a partial date in ISO form: '1990-6'
+```
 
 ## Scope and philosophy
 

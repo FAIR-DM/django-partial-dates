@@ -8,4 +8,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `PartialDate`, an immutable value for a date known to the year, the month or the day, and
+  `Precision`, which says which. A value is built from parts or read from `YYYY`, `YYYY-MM` or
+  `YYYY-MM-DD`, and written back as the same text.
 - The package skeleton: packaging, continuous integration and the release flow.
