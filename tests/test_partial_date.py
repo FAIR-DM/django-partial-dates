@@ -3,6 +3,7 @@
 import calendar
 import dataclasses
 import datetime
+import operator
 
 import pytest
 
@@ -134,7 +135,7 @@ class TestOrdering:
         values = every_value_in_years(1999, 2000)
 
         assert len(values) == 757
-        assert sorted(reversed(values)) == sorted(values, key=PartialDate.isoformat)
+        assert sorted(values[::-1]) == sorted(values, key=PartialDate.isoformat)
 
     def test_each_operator_agrees_with_iso_text_over_every_pair(self):
         values = pair_sample()
@@ -152,25 +153,16 @@ class TestOrdering:
         [datetime.date(1990, 6, 14), "1990-06-14", 1990],
         ids=["date", "str", "int"],
     )
-    def test_ordering_against_another_type_raises_type_error(self, other):
+    @pytest.mark.parametrize(
+        "compare", [operator.lt, operator.le, operator.gt, operator.ge]
+    )
+    def test_ordering_against_another_type_raises_type_error(self, compare, other):
         value = PartialDate(1990, 6, 14)
 
         with pytest.raises(TypeError):
-            value < other
+            compare(value, other)
         with pytest.raises(TypeError):
-            value <= other
-        with pytest.raises(TypeError):
-            value > other
-        with pytest.raises(TypeError):
-            value >= other
-        with pytest.raises(TypeError):
-            other < value
-        with pytest.raises(TypeError):
-            other <= value
-        with pytest.raises(TypeError):
-            other > value
-        with pytest.raises(TypeError):
-            other >= value
+            compare(other, value)
 
 
 class TestEquality:
