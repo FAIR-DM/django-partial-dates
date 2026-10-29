@@ -104,6 +104,9 @@ anything else, on SQLite and PostgreSQL.
   migration is the same on Django 5.2, where the default was `AutoField`, and
   `makemigrations --check` passes across the supported range
 
+- [x] T012 [US2] README *Status* corrected and the field's README section and CHANGELOG entry
+  reflowed
+
 **Checkpoint**: fixtures round-trip on each database, and each database reads what the other
 writes.
 
