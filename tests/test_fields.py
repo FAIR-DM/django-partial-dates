@@ -319,3 +319,50 @@ class TestValidation:
         record.full_clean()
 
         assert record.date == PartialDate(1990, 6)
+
+
+@pytest.mark.django_db
+class TestFiltering:
+    @pytest.fixture
+    def rows(self):
+        return {
+            text: Record.objects.create(date=text)
+            for text in ["1990", "1990-01", "1990-01-01", None]
+        }
+
+    def test_filtering_by_a_partial_date_finds_only_that_value(self, rows):
+        found = Record.objects.filter(date=PartialDate(1990))
+
+        assert list(found) == [rows["1990"]]
+
+    def test_filtering_by_iso_text_finds_only_that_value(self, rows):
+        found = Record.objects.filter(date="1990")
+
+        assert list(found) == [rows["1990"]]
+
+    def test_get_finds_an_event_by_a_partial_date(self, event):
+        found = Event.objects.get(occurred=PartialDate.fromisoformat(event.occurred))
+
+        assert found == event
+
+    def test_get_finds_an_event_by_iso_text(self, event):
+        assert Event.objects.get(occurred=event.occurred) == event
+
+    def test_a_unique_field_refuses_a_second_row_with_the_same_value(self):
+        Event.objects.create(occurred=PartialDate(1990))
+
+        with pytest.raises(IntegrityError), transaction.atomic():
+            Event.objects.create(occurred="1990")
+
+    def test_a_db_index_field_has_an_index(self):
+        with connection.cursor() as cursor:
+            constraints = connection.introspection.get_constraints(
+                cursor, Event._meta.db_table
+            )
+
+        indexed = [
+            name
+            for name, constraint in constraints.items()
+            if constraint["index"] and constraint["columns"] == ["indexed"]
+        ]
+        assert indexed
