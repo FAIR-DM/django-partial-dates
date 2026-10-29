@@ -2,7 +2,11 @@
 
 import datetime
 import enum
+import re
 from dataclasses import dataclass
+from typing import Self
+
+ISO_FORM = re.compile(r"([0-9]{4})(?:-([0-9]{2})(?:-([0-9]{2}))?)?")
 
 
 class Precision(enum.StrEnum):
@@ -37,6 +41,33 @@ class PartialDate:
     year: int
     month: int | None = None
     day: int | None = None
+
+    @classmethod
+    def fromisoformat(cls, text: str) -> Self:
+        """Read a partial date from its ISO form.
+
+        Only ``YYYY``, ``YYYY-MM`` and ``YYYY-MM-DD`` are accepted, in ASCII digits
+        and with no surrounding whitespace.
+
+        Args:
+            text: The ISO form to read.
+
+        Returns:
+            The partial date the text records.
+
+        Raises:
+            ValueError: The text is not a string, is not one of the three forms, or
+                names a date that does not exist.
+        """
+        match = ISO_FORM.fullmatch(text) if isinstance(text, str) else None
+        if match is None:
+            raise ValueError(f"Not a partial date in ISO form: {text!r}")
+        year, month, day = match.groups()
+        return cls(
+            int(year),
+            None if month is None else int(month),
+            None if day is None else int(day),
+        )
 
     def __post_init__(self) -> None:
         """Refuse a combination of parts that is not a date.

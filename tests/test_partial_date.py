@@ -7,6 +7,53 @@ import pytest
 from partial_dates import PartialDate, Precision
 
 
+class TestReadingTheIsoForm:
+    """Reading accepts the three ISO forms and nothing else."""
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("1990", PartialDate(1990)),
+            ("1990-06", PartialDate(1990, 6)),
+            ("1990-06-14", PartialDate(1990, 6, 14)),
+            ("0001-01-01", PartialDate(1, 1, 1)),
+        ],
+    )
+    def test_each_iso_form_equals_the_value_built_from_parts(self, text, expected):
+        assert PartialDate.fromisoformat(text) == expected
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "1990-6",
+            "19900614",
+            "90",
+            "1990-06-14T00:00",
+            "1990?",
+            "1990~",
+            " 1990",
+            "1990 ",
+            "",
+            "0000",
+            "10000",
+            "1990-13",
+            "1990-02-30",
+            "1990\n",
+            "١٩٩٠",
+            "1990-06-",
+            "1990-",
+        ],
+    )
+    def test_any_other_text_raises_value_error(self, text):
+        with pytest.raises(ValueError):
+            PartialDate.fromisoformat(text)
+
+    @pytest.mark.parametrize("value", [1990, None, b"1990", 1990.0])
+    def test_a_non_string_raises_value_error(self, value):
+        with pytest.raises(ValueError):
+            PartialDate.fromisoformat(value)
+
+
 class TestBuilding:
     """A partial date holds the parts it was given and nothing more."""
 
