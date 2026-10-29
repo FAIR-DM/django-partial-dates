@@ -113,9 +113,10 @@ as the internal type gives the `varchar(10)` column on every backend without eit
 The collation is set per backend in `db_parameters()` and the check is the field's column check,
 `db_check()`, which the schema editor writes into the column definition (research R2 and R3).
 Neither appears as an argument in a migration, so a developer declares nothing and a second
-`makemigrations` finds nothing. The cost: if a later release changes the check, existing columns
-keep the old one until the field is altered, so a change to the check ships with a migration
-operation that rewrites it, as Constitution Article XIII asks of storage changes.
+`makemigrations` finds nothing. Django's `AlterField` never reads a field's own column check, so
+changing the check in a later release, or converting an existing column to this field (R5), needs
+its own `RunSQL` operation, shipped with that release as Constitution Article XIII asks of storage
+changes.
 
 **ADR:** none — ADR 0001 already fixes the collation and the check; this is where Django lets a
 field supply them.
@@ -133,3 +134,19 @@ US-1 holds eight tasks over two concerns: the column and its check, then what th
 and gives back. Each group leaves the tree green on its own.
 
 **ADR:** none — how the build is divided.
+
+## D15 — Design review outcome
+
+- DR SPEC-001 (high): a `PartialDate` default could not be written to a migration. `deconstruct()`
+  now writes it as its ISO form, tested in T002.
+- DR SPEC-002 (medium): SQLite accepted text with an embedded NUL. The SQLite arm of the check
+  compares the byte length with the character length, tested in T003.
+- DR ARCH-001 (medium): factories, fixtures and the `verbose_name`/`help_text` check the testing
+  standard requires are added to T001.
+- DR SPEC-003 (low): D12 corrected: `AlterField` never reads the field's check. Watch item for R5.
+- DR SPEC-004 (low): the two database runs belong to T010, and T003 reads accepted rows back.
+- Notes taken: the import test moves to `tests/test_init.py`, `value_to_string` goes through
+  `get_prep_value`, and `Event.on` is renamed `occurred`. The migration records the path
+  `partial_dates.fields.PartialDateField`, which is therefore a stable name.
+
+**ADR:** none — corrections to this feature's plan.

@@ -58,14 +58,14 @@ it in `__all__` beside the FS-001 names.
 | `empty_strings_allowed = False` | default is `None`, never `""` | FR-005 |
 | `default_error_messages` | `{"invalid": gettext_lazy(...)}` | FR-008 |
 | `__init__(*args, **kwargs)` | refuses a `max_length` argument with `TypeError`; sets `max_length = 10` | FR-002 |
-| `deconstruct()` | drops `max_length` | FR-004 |
+| `deconstruct()` | drops `max_length`, and writes a `PartialDate` default as its ISO form so a migration can record it | FR-004, FR-009 |
 | `get_internal_type()` | `"CharField"` | FR-002 |
 | `db_parameters(connection)` | the parent's, with `collation = "C"` when `connection.vendor == "postgresql"` | FR-002 |
-| `db_check(connection)` | the check SQL of research R3, built from `connection.ops.quote_name(self.column)` | FR-003 |
+| `db_check(connection)` | the check SQL of research R3, built from `connection.ops.quote_name(self.column)`. On SQLite only, it also requires `LENGTH(CAST(col AS BLOB)) = LENGTH(col)`, which refuses text with an embedded NUL | FR-003 |
 | `from_db_value(value, expression, connection)` | research R4 | FR-006 |
 | `to_python(value)` | research R4; `ValidationError(self.error_messages["invalid"], code="invalid", params={"value": value})` | FR-008 |
 | `get_prep_value(value)` | research R4 | FR-005, FR-007, FR-010 |
-| `value_to_string(obj)` | research R4 | FR-013 |
+| `value_to_string(obj)` | the field's value through `get_prep_value`, so an instance still holding unvalidated text writes its ISO form | FR-013 |
 
 The check SQL is assembled inside `db_check` from local expressions: a digit test per position,
 the year, month and day casts, the days in the month. No module-level helper, no name with a
@@ -78,8 +78,10 @@ leading underscore.
   - `Record`: `date = PartialDateField(null=True, blank=True)` and
     `other = PartialDateField(null=True, blank=True)` (two fields on one model, an edge case),
     `defaulted = PartialDateField(default="1990")`
-  - `Event`: `on = PartialDateField(unique=True)` (requires a date, no default),
+  - `Event`: `occurred = PartialDateField(unique=True)` (requires a date, no default),
     `indexed = PartialDateField(db_index=True, null=True, blank=True)`
+- Every test-model field has a `verbose_name` and `help_text` (testing standard §5).
+- `tests/factories.py`: `RecordFactory` and `EventFactory`, `Event.occurred` from a `factory.Sequence` of distinct ISO forms. `tests/conftest.py` holds fixtures wrapping them. `tests/test_factories.py` mirrors the factories module.
 - `tests/migrations/0001_initial.py`, made with `makemigrations tests`.
 - `tests/fixtures/records.json`, `records.jsonl`, `records.xml`: rows at each precision and one
   empty, exactly as `dumpdata` writes them (research R7).
@@ -101,8 +103,11 @@ chosen by `TEST_DATABASE` (research R5). `USE_TZ` stays.
 | `TestRefusedWrites` | US-1 8 through `save()`, `create()`, `update()`, `bulk_create()` and `bulk_update()`, rows unchanged afterwards |
 | `TestValidation` | US-1 9, 10 |
 | `TestFiltering` | US-1 13 |
-| `TestImport` | FR-012, in a fresh interpreter with `DJANGO_SETTINGS_MODULE` removed |
 | `TestFixtures` | US-2 1–7, parametrised over `json`, `jsonl` and `xml` |
+
+`tests/test_init.py` gains `TestImportWithoutSettings` for FR-012: a fresh interpreter with
+`DJANGO_SETTINGS_MODULE` removed imports `partial_dates` and builds a value. `tests/test_models.py`
+holds the one parametrised `verbose_name` and `help_text` check over every test-model field.
 
 US-1 scenario 15 and SC-004 are the whole suite run twice, with and without
 `TEST_DATABASE=postgresql`, before review. Both results go in the pull request.
@@ -126,6 +131,8 @@ partial_dates/
 tests/
 ├── settings.py                        database from the environment, the test app
 ├── models.py                          new
+├── factories.py, conftest.py          new
+├── test_factories.py, test_models.py  new
 ├── migrations/0001_initial.py         new
 ├── fixtures/records.{json,jsonl,xml}  new
 └── test_fields.py                     new

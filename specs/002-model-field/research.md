@@ -51,6 +51,11 @@ The SQL the field returns must be portable and must not depend on evaluation ord
   only in the `THEN`.
 - **`NULL` passes explicitly.** A `CASE` with an `ELSE FALSE` turns `NULL` into false, which
   refused `NULL` on SQLite in the trial. The check is `col IS NULL OR CASE ... END`.
+- **An embedded NUL is refused on SQLite.** SQLite's `LENGTH()` counts characters up to the
+  first NUL, so `1990`, a NUL, then `junk` passes the length test (reproduced on SQLite 3.53.1).
+  The SQLite arm adds `LENGTH(CAST(col AS BLOB)) = LENGTH(col)`, equal for every accepted form.
+  `CAST AS BLOB` is not PostgreSQL, so `db_check` branches on `connection.vendor`. PostgreSQL text
+  cannot hold a NUL at all, and the driver refuses it before the query runs.
 - **Digits are tested one character at a time** with `SUBSTR(col, i, 1) BETWEEN '0' AND '9'`,
   which is byte order on both and rejects non-ASCII digits.
 
@@ -81,12 +86,16 @@ tests accept either for overlong text.
 | `from_db_value` | `None` or the stored text | `None`, or `PartialDate.fromisoformat(text)` |
 | `to_python` | anything | `None` for `None` and `""`; a `PartialDate` unchanged; anything else through `PartialDate.fromisoformat`, its `ValueError` re-raised as `ValidationError(code="invalid")` |
 | `get_prep_value` | anything | `None` for `None` and `""`; `PartialDate` → `isoformat()`; anything else through `PartialDate.fromisoformat(value).isoformat()`, so the value's `ValueError` is raised before any query runs |
-| `value_to_string` | the instance | the ISO form of the field's value, or `None` |
+| `value_to_string` | the instance | the field's value through `get_prep_value`: the ISO form, or `None` |
 
 `get_prep_value` is called for every ORM write (`save()`, `create()`, `update()`, `bulk_create()`,
 `bulk_update()`) and for lookup values, so exact-match filtering by a `PartialDate` or its ISO
 form works with no lookup code (FR-010). `PartialDate.fromisoformat` already refuses a non-`str`
 with `ValueError` (FS-001 D3), which covers a real date or a number (US-1 scenario 8).
+
+A `PartialDate` given as a default cannot be written to a migration: the migration serialiser
+knows no frozen dataclass. `deconstruct()` therefore writes such a default as its ISO form, which
+`get_prep_value` reads back the same way.
 
 `empty_strings_allowed = False`, as on Django's `DateField`. `get_default()` then gives `None`
 instead of `""`, and the column never holds empty text.

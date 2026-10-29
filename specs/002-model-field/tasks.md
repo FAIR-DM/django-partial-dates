@@ -18,7 +18,11 @@ anything else, on SQLite and PostgreSQL.
 
 - [ ] T001 [US1] Test settings choose the database from `TEST_DATABASE` and the `PG*` variables
   (research R5). `"tests"` becomes an installed app. `tests/models.py` with `Record` and `Event`
-  as `plan.md` describes, and `tests/migrations/0001_initial.py` made by `makemigrations tests`.
+  as `plan.md` describes, every field with a `verbose_name` and `help_text`, and
+  `tests/migrations/0001_initial.py` made by `makemigrations tests`. `tests/factories.py`
+  (`RecordFactory`, `EventFactory`), fixtures wrapping them in `tests/conftest.py`, and
+  `tests/test_factories.py`. `tests/test_models.py`: one parametrised test that every test-model
+  field has a `verbose_name` and `help_text`.
   `tests/models.py`, `tests/migrations/` and `tests/fixtures/` join the conformance
   `non-mirror-paths` in `pyproject.toml`. `dependencies = ["django>=5.2"]` in `pyproject.toml`,
   lock updated with `uv lock`
@@ -27,14 +31,17 @@ anything else, on SQLite and PostgreSQL.
   argument, `deconstruct()`, `get_internal_type()`, `db_parameters()` with the `C` collation on
   PostgreSQL, `description`, `empty_strings_allowed = False`. Tests in `TestColumn`: the column
   is `varchar` of length 10 read through `connection.introspection`, collated `C` on PostgreSQL,
-  `deconstruct()` carries no `max_length`, passing `max_length` raises `TypeError`, and
+  `deconstruct()` carries no `max_length`, a `PartialDate` default deconstructs to its ISO form
+  and the field serialises with `MigrationWriter.serialize`, passing `max_length` raises `TypeError`, and
   `makemigrations --check --dry-run` finds nothing for the test app (US-1 1, 2)
 - [ ] T003 [US1] `db_check()` returning the check SQL of research R3. Tests in
   `TestDatabaseCheck`, by raw parameterised SQL against the `Record` table: every text in US-1
   scenario 11 plus `990`, `1990-00`, `1990-06-00`, `1990-06-32`, `199a`, `1990/06`, Arabic-Indic
-  digits and an eleven-character text is refused on `INSERT` and on `UPDATE` of an existing row
+  digits, an eleven-character text and `1990`, a NUL, then `junk` (on PostgreSQL the driver refuses
+  it, so accept the driver's error there) is refused on `INSERT` and on `UPDATE` of an existing row
   (`IntegrityError`, or `DataError` for the overlong text); every form in US-1 scenario 12 plus
-  `1990`, `1990-06`, `1990-06-14`, `1996-02-29` and `0990` is accepted, and `NULL` is accepted.
+  `1990`, `1990-06`, `1990-06-14`, `1996-02-29` and `0990` is accepted and reads back through `Record.objects` as the partial date value (US-1 12), and
+  `NULL` is accepted.
   Both fields of `Record` refuse, each through its own check (edge case)
 
 **Checkpoint**: the column exists as ADR 0001 describes and refuses malformed text by any route.
@@ -61,9 +68,9 @@ anything else, on SQLite and PostgreSQL.
   `django-admin makemessages -l en` from inside `partial_dates/`
 - [ ] T007 [US1] Tests in `TestFiltering`: with rows holding `1990`, `1990-01`, `1990-01-01` and
   `None`, `filter(date=PartialDate(1990))` and `filter(date="1990")` find exactly the `1990` row,
-  and `get(on=...)` finds an `Event` by its value (US-1 13). Two `Event` rows with the same `on`
+  and `get(occurred=...)` finds an `Event` by its value (US-1 13). Two `Event` rows with the same `occurred`
   raise `IntegrityError`, and `Event.indexed` has an index in `connection.introspection` (FR-009).
-  In `TestImport`: a fresh interpreter
+  In `tests/test_init.py`, `TestImportWithoutSettings`: a fresh interpreter
   with `DJANGO_SETTINGS_MODULE` removed imports `partial_dates`, builds `PartialDate(1990)` and
   exits 0 (FR-012)
 - [ ] T008 [US1] README: *Status* says the field exists; *Usage* gains a section on the field —
@@ -90,7 +97,8 @@ anything else, on SQLite and PostgreSQL.
   fixture of ISO texts loads as the values (US-2 4); a fixture holding `1990-6` fails to load and
   leaves no row holding it (US-2 5)
 - [ ] T010 [US2] README *Usage*: fixtures written by `dumpdata` load back with `loaddata`, empty
-  values included. CHANGELOG entry extended
+  values included. CHANGELOG entry extended. Then run the full suite with and without
+  `TEST_DATABASE=postgresql` and record both results for the pull request (US-1 15, SC-004)
 
 **Checkpoint**: fixtures round-trip on each database, and each database reads what the other
 writes.
