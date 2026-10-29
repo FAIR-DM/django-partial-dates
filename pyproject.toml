@@ -70,8 +70,9 @@ extend = "ruff-base.toml"
 
 [tool.ruff.lint.extend-per-file-ignores]
 # S101: asserts are the point of a test. S105: the test settings carry a
-# placeholder SECRET_KEY.
-"tests/*" = ["S101", "S105"]
+# placeholder SECRET_KEY. S608: the database tests write raw SQL on purpose, with
+# quoted identifiers and bound values. S603: one test starts a fresh interpreter.
+"tests/*" = ["S101", "S105", "S603", "S608"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"

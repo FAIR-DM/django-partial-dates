@@ -16,8 +16,6 @@ class TestVersion:
 
 
 class TestImportWithoutSettings:
-    """The package imports and builds a value with no Django settings configured."""
-
     def test_a_fresh_interpreter_imports_it_and_builds_a_value(self):
         env = {k: v for k, v in os.environ.items() if k != "DJANGO_SETTINGS_MODULE"}
         code = "import partial_dates; partial_dates.PartialDate(1990)"
