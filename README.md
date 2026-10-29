@@ -72,6 +72,33 @@ Traceback (most recent call last):
 ValueError: Not a partial date in ISO form: '1990-6'
 ```
 
+Values sort in the order of their ISO forms, so a year comes before its months and a month before
+its days. Two values are equal when all their parts are equal: `1990` is not `1990-01-01`.
+
+```python
+>>> values = [
+...     PartialDate(1991),
+...     PartialDate(1990, 6, 14),
+...     PartialDate(1990),
+...     PartialDate(1990, 6),
+... ]
+>>> [value.isoformat() for value in sorted(values)]
+['1990', '1990-06', '1990-06-14', '1991']
+>>> PartialDate(1990) == PartialDate(1990, 1, 1)
+False
+```
+
+Values are hashable, so they work as set members and dictionary keys. A value is never equal to a
+`datetime.date`, a string or an integer, and ordering against one raises `TypeError`.
+
+```python
+>>> len({PartialDate(1990, 6), PartialDate.fromisoformat("1990-06")})
+1
+>>> counts = {PartialDate(1990, 6): 3}
+>>> counts[PartialDate.fromisoformat("1990-06")]
+3
+```
+
 ## Scope and philosophy
 
 **What it is:**
