@@ -98,7 +98,7 @@ needs only to set the variables.
 The feature changes no screen. Until R4 the field appears in forms and the admin however Django
 shows a plain text field.
 
-**ADR:** none.
+**ADR:** none — a judgement for this feature only, nothing downstream inherits it.
 
 ## D11 — The field subclasses `models.Field`, with a `CharField` column
 
