@@ -82,6 +82,11 @@ tests/test_partial_date.py::TestRelation`
 
 **Checkpoint**: every acceptance scenario has a test.
 
+## Convergence
+
+- [x] T012 [US1] Remove the docstrings from the test classes, as the code documentation standard
+  requires, and name `Relation` in the module docstring
+
 ## Dependencies
 
 US1 → US2 → US3, sequential on one branch: each adds to the class and the README section the
