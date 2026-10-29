@@ -173,6 +173,59 @@ class TestOrdering:
             other >= value
 
 
+class TestEquality:
+    """Values with the same parts are the same value, and only those."""
+
+    @pytest.mark.parametrize(
+        ("year", "month", "day"), [(1990, None, None), (1990, 6, None), (1990, 6, 14)]
+    )
+    def test_the_same_parts_are_equal_with_equal_hashes(self, year, month, day):
+        left = PartialDate(year, month, day)
+        right = PartialDate(year, month, day)
+
+        assert left == right
+        assert hash(left) == hash(right)
+
+    @pytest.mark.parametrize(
+        ("coarse", "fine"),
+        [
+            (PartialDate(1990), PartialDate(1990, 1, 1)),
+            (PartialDate(1990, 6), PartialDate(1990, 6, 1)),
+        ],
+    )
+    def test_a_value_is_not_equal_to_the_same_value_at_finer_precision(
+        self, coarse, fine
+    ):
+        assert coarse != fine
+
+    def test_equal_values_built_separately_are_one_set_member(self):
+        values = {
+            PartialDate(1990, 6, 14),
+            PartialDate(1990, 6, 14),
+            PartialDate.fromisoformat("1990-06-14"),
+        }
+
+        assert values == {PartialDate(1990, 6, 14)}
+        assert len(values) == 1
+
+    def test_equal_values_built_separately_are_one_dict_key(self):
+        values = {PartialDate(1990, 6): "first"}
+        values[PartialDate.fromisoformat("1990-06")] = "second"
+
+        assert values == {PartialDate(1990, 6): "second"}
+
+    @pytest.mark.parametrize(
+        "other",
+        [datetime.date(1990, 6, 14), "1990-06-14", 1990],
+        ids=["date", "str", "int"],
+    )
+    def test_a_value_is_not_equal_to_another_type(self, other):
+        value = PartialDate(1990, 6, 14)
+
+        assert value != other
+        assert other != value
+
+
 class TestBuilding:
     """A partial date holds the parts it was given and nothing more."""
 
