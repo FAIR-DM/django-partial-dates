@@ -4,14 +4,15 @@ import json
 from pathlib import Path
 
 import pytest
-from django.core.exceptions import ValidationError
 from django.core import serializers
+from django.core.exceptions import ValidationError
 from django.core.management import call_command
 from django.core.serializers.base import DeserializationError
 from django.db import DataError, IntegrityError, connection, transaction
 from django.db.migrations.writer import MigrationWriter
 
 from partial_dates import PartialDate, PartialDateField
+from tests.factories import RecordFactory
 from tests.models import Event, Record
 
 
@@ -103,6 +104,11 @@ REFUSED = [
         "1990-04-31",
         "1990-06-00",
         "1990-06-32",
+        "1991-02-29",
+        "2100-02-29",
+        "1990-06-31",
+        "1990-09-31",
+        "1990-11-31",
         "199a",
         "1990/06",
         "١٩٩٠",
@@ -124,6 +130,10 @@ ACCEPTED = [
     ("2000-02-29", PartialDate(2000, 2, 29)),
     ("1996-02-29", PartialDate(1996, 2, 29)),
     ("0990", PartialDate(990)),
+    ("0004-02-29", PartialDate(4, 2, 29)),
+    ("2400-02-29", PartialDate(2400, 2, 29)),
+    ("1990-06-30", PartialDate(1990, 6, 30)),
+    ("1990-12-31", PartialDate(1990, 12, 31)),
 ]
 
 
@@ -249,7 +259,7 @@ class TestSavingAndReading:
 
         assert record.defaulted == PartialDate(1990)
 
-    def test_a_default_given_as_a_partial_date_is_stored(self):
+    def test_a_default_given_as_a_partial_date_is_prepared_as_its_iso_form(self):
         field = PartialDateField(default=PartialDate(1990))
         field.set_attributes_from_name("when")
 
@@ -261,7 +271,7 @@ class TestSavingAndReading:
 class TestRefusedWrites:
     @pytest.fixture
     def rows(self):
-        return [Record.objects.create(date=PartialDate(1990, n)) for n in (1, 2)]
+        return [RecordFactory(date=PartialDate(1990, n)) for n in (1, 2)]
 
     def values(self):
         return list(Record.objects.order_by("pk").values_list("date", flat=True))
@@ -331,7 +341,7 @@ class TestFiltering:
     @pytest.fixture
     def rows(self):
         return {
-            text: Record.objects.create(date=text)
+            text: RecordFactory(date=text)
             for text in ["1990", "1990-01", "1990-01-01", None]
         }
 
@@ -411,9 +421,7 @@ class TestFixtures:
 
     @pytest.fixture
     def rows(self):
-        return [
-            Record.objects.create(pk=pk, date=text) for pk, text in self.texts.items()
-        ]
+        return [RecordFactory(pk=pk, date=text) for pk, text in self.texts.items()]
 
     def dump(self, fmt):
         out = io.StringIO()
