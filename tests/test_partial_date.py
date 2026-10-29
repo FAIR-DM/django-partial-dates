@@ -4,6 +4,7 @@ import calendar
 import dataclasses
 import datetime
 import operator
+import random
 
 import pytest
 
@@ -135,7 +136,9 @@ class TestOrdering:
         values = every_value_in_years(1999, 2000)
 
         assert len(values) == 757
-        assert sorted(values[::-1]) == sorted(values, key=PartialDate.isoformat)
+        shuffled = random.Random(0).sample(values, len(values))
+
+        assert sorted(shuffled) == sorted(values, key=PartialDate.isoformat)
 
     def test_each_operator_agrees_with_iso_text_over_every_pair(self):
         values = pair_sample()
