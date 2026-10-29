@@ -1,8 +1,13 @@
 import datetime
+import io
+import json
+from pathlib import Path
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.core import serializers
 from django.core.management import call_command
+from django.core.serializers.base import DeserializationError
 from django.db import DataError, IntegrityError, connection, transaction
 from django.db.migrations.writer import MigrationWriter
 
@@ -366,3 +371,106 @@ class TestFiltering:
             if constraint["index"] and constraint["columns"] == ["indexed"]
         ]
         assert indexed
+
+
+@pytest.mark.django_db
+class TestFixtures:
+    fixtures_dir = Path(__file__).parent / "fixtures"
+    texts = {1: "1990", 2: "1990-06", 3: "1990-06-14", 4: None}
+    handwritten = {
+        "json": json.dumps(
+            [
+                {"model": "tests.record", "pk": pk, "fields": {"date": text}}
+                for pk, text in {1: "1990", 2: "1990-06", 3: "1990-06-14"}.items()
+            ]
+        ),
+        "jsonl": "\n".join(
+            json.dumps({"model": "tests.record", "pk": pk, "fields": {"date": text}})
+            for pk, text in {1: "1990", 2: "1990-06", 3: "1990-06-14"}.items()
+        ),
+        "xml": (
+            '<?xml version="1.0" encoding="utf-8"?><django-objects version="1.0">'
+            + "".join(
+                f'<object model="tests.record" pk="{pk}">'
+                f'<field name="date" type="CharField">{text}</field></object>'
+                for pk, text in {1: "1990", 2: "1990-06", 3: "1990-06-14"}.items()
+            )
+            + "</django-objects>"
+        ),
+    }
+    invalid = {
+        "json": '[{"model": "tests.record", "pk": 1, "fields": {"date": "1990-6"}}]',
+        "jsonl": '{"model": "tests.record", "pk": 1, "fields": {"date": "1990-6"}}',
+        "xml": (
+            '<?xml version="1.0" encoding="utf-8"?><django-objects version="1.0">'
+            '<object model="tests.record" pk="1">'
+            '<field name="date" type="CharField">1990-6</field></object>'
+            "</django-objects>"
+        ),
+    }
+
+    @pytest.fixture
+    def rows(self):
+        return [
+            Record.objects.create(pk=pk, date=text) for pk, text in self.texts.items()
+        ]
+
+    def dump(self, fmt):
+        out = io.StringIO()
+        call_command(
+            "dumpdata",
+            "tests.Record",
+            format=fmt,
+            indent=2 if fmt != "jsonl" else None,
+            stdout=out,
+        )
+        return out.getvalue()
+
+    def test_serialising_an_instance_holding_empty_text_writes_null(self):
+        record = Record(pk=1, date="")
+
+        text = serializers.serialize("json", [record])
+
+        assert json.loads(text)[0]["fields"]["date"] is None
+
+    @pytest.mark.parametrize("fmt", ["json", "jsonl", "xml"])
+    def test_dumpdata_equals_the_committed_fixture(self, rows, fmt):
+        committed = (self.fixtures_dir / f"records.{fmt}").read_text()
+
+        assert self.dump(fmt) == committed
+
+    @pytest.mark.parametrize("fmt", ["json", "jsonl", "xml"])
+    def test_loaddata_of_the_committed_fixture_gives_the_values(self, fmt):
+        call_command("loaddata", f"records.{fmt}", verbosity=0)
+
+        loaded = {record.pk: record.date for record in Record.objects.all()}
+        assert loaded == {
+            1: PartialDate(1990),
+            2: PartialDate(1990, 6),
+            3: PartialDate(1990, 6, 14),
+            4: None,
+        }
+
+    @pytest.mark.parametrize("fmt", ["json", "jsonl", "xml"])
+    def test_loaddata_reads_a_hand_written_fixture_of_iso_texts(self, tmp_path, fmt):
+        path = tmp_path / f"hand.{fmt}"
+        path.write_text(self.handwritten[fmt])
+
+        call_command("loaddata", str(path), verbosity=0)
+
+        loaded = {record.pk: record.date for record in Record.objects.all()}
+        assert loaded == {
+            1: PartialDate(1990),
+            2: PartialDate(1990, 6),
+            3: PartialDate(1990, 6, 14),
+        }
+
+    @pytest.mark.parametrize("fmt", ["json", "jsonl", "xml"])
+    def test_loaddata_refuses_text_that_is_not_a_partial_date(self, tmp_path, fmt):
+        path = tmp_path / f"bad.{fmt}"
+        path.write_text(self.invalid[fmt])
+
+        with pytest.raises((DeserializationError, ValidationError)):
+            call_command("loaddata", str(path), verbosity=0)
+
+        assert not Record.objects.exists()

@@ -187,3 +187,16 @@ class PartialDateField(models.Field):
         if isinstance(value, PartialDate):
             return value.isoformat()
         return PartialDate.fromisoformat(value).isoformat()
+
+    # Django types the result as str, but its serialisers write None as null.
+    def value_to_string(self, obj: models.Model) -> str | None:  # type: ignore[override]
+        """Write the field's value for a serialiser.
+
+        Args:
+            obj: The instance whose value is written.
+
+        Returns:
+            `None` for an empty value, otherwise the ISO form of the value, also when
+            the instance still holds unvalidated text.
+        """
+        return self.get_prep_value(self.value_from_object(obj))
