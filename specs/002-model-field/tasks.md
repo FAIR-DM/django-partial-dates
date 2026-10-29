@@ -78,6 +78,11 @@ anything else, on SQLite and PostgreSQL.
   refuses malformed text whichever route writes it. Examples run as written. CHANGELOG
   `[Unreleased]`: *Added* the field, *Changed* Django is now a dependency
 
+- [x] T013 [US1] Review fix: the check tests cover every month length and the century leap
+  rules, the default test is named for what it checks, and row fixtures use the factory
+- [x] T014 [US1] Review fix: the new tests pass `ruff check`, and the new test class has no
+  docstring
+
 **Checkpoint**: a developer can store and read partial dates on a model.
 
 ## Phase 2: User Story 2 — A developer moves partial dates in and out with fixtures (P2)
