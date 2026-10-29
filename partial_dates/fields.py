@@ -71,3 +71,67 @@ class PartialDateField(models.Field):
         if connection.vendor == "postgresql":
             parameters["collation"] = "C"
         return parameters
+
+    def db_check(self, connection: BaseDatabaseWrapper) -> str:
+        """Build the column check that refuses text that is not a partial date.
+
+        Args:
+            connection: The database the column is created on.
+
+        Returns:
+            SQL, true for `NULL` and for `YYYY`, `YYYY-MM` and `YYYY-MM-DD` naming a
+            real date, and false for any other text. On SQLite it also refuses text
+            holding a NUL character.
+        """
+        column = connection.ops.quote_name(self.db_column or self.attname)
+
+        def digits(*positions: int) -> str:
+            return " AND ".join(
+                f"SUBSTR({column}, {position}, 1) BETWEEN '0' AND '9'"
+                for position in positions
+            )
+
+        year = f"CAST(SUBSTR({column}, 1, 4) AS INTEGER)"
+        month = f"CAST(SUBSTR({column}, 6, 2) AS INTEGER)"
+        day = f"CAST(SUBSTR({column}, 9, 2) AS INTEGER)"
+        leap = (
+            f"(({year} - ({year} / 4) * 4 = 0 AND {year} - ({year} / 100) * 100 <> 0)"
+            f" OR {year} - ({year} / 400) * 400 = 0)"
+        )
+        days = (
+            f"CASE WHEN {month} = 2 THEN CASE WHEN {leap} THEN 29 ELSE 28 END "
+            f"WHEN {month} IN (4, 6, 9, 11) THEN 30 ELSE 31 END"
+        )
+        year_set = f"SUBSTR({column}, 1, 4) <> '0000'"
+        sql = (
+            f"{column} IS NULL OR CASE "
+            f"WHEN LENGTH({column}) = 4 AND {digits(1, 2, 3, 4)} THEN {year_set} "
+            f"WHEN LENGTH({column}) = 7 AND {digits(1, 2, 3, 4, 6, 7)} "
+            f"AND SUBSTR({column}, 5, 1) = '-' "
+            f"THEN {year_set} AND {month} BETWEEN 1 AND 12 "
+            f"WHEN LENGTH({column}) = 10 AND {digits(1, 2, 3, 4, 6, 7, 9, 10)} "
+            f"AND SUBSTR({column}, 5, 1) = '-' AND SUBSTR({column}, 8, 1) = '-' "
+            f"THEN {year_set} AND {month} BETWEEN 1 AND 12 "
+            f"AND {day} BETWEEN 1 AND ({days}) "
+            f"ELSE FALSE END"
+        )
+        if connection.vendor == "sqlite":
+            sql = f"({sql}) AND LENGTH(CAST({column} AS BLOB)) = LENGTH({column})"
+        # Django's SQLite introspection splits the table's SQL on ", " and fails on a
+        # check that contains one.
+        return sql.replace(", ", ",")
+
+    def from_db_value(
+        self, value: str | None, expression: Any, connection: BaseDatabaseWrapper
+    ) -> PartialDate | None:
+        """Read the stored text as a partial date.
+
+        Args:
+            value: The stored text, or `None`.
+            expression: The expression the value was selected by.
+            connection: The database the value came from.
+
+        Returns:
+            `None`, or the partial date the text records.
+        """
+        return None if value is None else PartialDate.fromisoformat(value)
