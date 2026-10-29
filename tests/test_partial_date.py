@@ -220,6 +220,56 @@ class TestEquality:
         assert other != value
 
 
+class TestPeriod:
+    """A partial date covers a period, from its first day to its last."""
+
+    @pytest.mark.parametrize(
+        ("value", "start", "end"),
+        [
+            (PartialDate(1990), datetime.date(1990, 1, 1), datetime.date(1990, 12, 31)),
+            (
+                PartialDate(1990, 6),
+                datetime.date(1990, 6, 1),
+                datetime.date(1990, 6, 30),
+            ),
+            (
+                PartialDate(1990, 6, 14),
+                datetime.date(1990, 6, 14),
+                datetime.date(1990, 6, 14),
+            ),
+            (
+                PartialDate(1990, 2),
+                datetime.date(1990, 2, 1),
+                datetime.date(1990, 2, 28),
+            ),
+            (
+                PartialDate(2000, 2),
+                datetime.date(2000, 2, 1),
+                datetime.date(2000, 2, 29),
+            ),
+            (
+                PartialDate(1900, 2),
+                datetime.date(1900, 2, 1),
+                datetime.date(1900, 2, 28),
+            ),
+            (PartialDate(1), datetime.date(1, 1, 1), datetime.date(1, 12, 31)),
+            (PartialDate(9999), datetime.date(9999, 1, 1), datetime.date(9999, 12, 31)),
+        ],
+    )
+    def test_start_and_end_are_the_first_and_last_day_of_the_period(
+        self, value, start, end
+    ):
+        assert value.start == start
+        assert value.end == end
+        assert type(value.start) is datetime.date
+        assert type(value.end) is datetime.date
+
+    def test_start_and_end_of_every_value_in_two_years_bound_the_period(self):
+        for value in every_value_in_years(1999, 2000):
+            assert value.start <= value.end
+            assert value.start.year == value.end.year == value.year
+
+
 class TestBuilding:
     """A partial date holds the parts it was given and nothing more."""
 

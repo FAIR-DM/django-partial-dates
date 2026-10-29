@@ -1,5 +1,6 @@
 """The partial date value and its precision."""
 
+import calendar
 import datetime
 import enum
 import re
@@ -192,3 +193,24 @@ class PartialDate:
         if self.month is not None:
             return Precision.MONTH
         return Precision.YEAR
+
+    @property
+    def start(self) -> datetime.date:
+        """Return the first day of the period the date covers.
+
+        Returns:
+            The first day of the year, the month or the day that was recorded.
+        """
+        return datetime.date(self.year, self.month or 1, self.day or 1)
+
+    @property
+    def end(self) -> datetime.date:
+        """Return the last day of the period the date covers.
+
+        Returns:
+            The last day of the year, the month or the day that was recorded.
+        """
+        month = self.month or 12
+        return datetime.date(
+            self.year, month, self.day or calendar.monthrange(self.year, month)[1]
+        )
