@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 from django.core.management import call_command
 from django.db import DataError, IntegrityError, connection, transaction
@@ -247,3 +249,54 @@ class TestSavingAndReading:
 
         assert field.get_default() == PartialDate(1990)
         assert field.get_prep_value(field.get_default()) == "1990"
+
+
+@pytest.mark.django_db
+class TestRefusedWrites:
+    @pytest.fixture
+    def rows(self):
+        return [Record.objects.create(date=PartialDate(1990, n)) for n in (1, 2)]
+
+    def values(self):
+        return list(Record.objects.order_by("pk").values_list("date", flat=True))
+
+    @pytest.fixture(
+        params=["1990-6", "990", datetime.date(1990, 6, 14), 1990],
+        ids=["short-month", "short-year", "date", "int"],
+    )
+    def bad(self, request):
+        return request.param
+
+    def test_save_refuses_the_value(self, rows, bad):
+        record = Record(date=bad)
+
+        with pytest.raises(ValueError), transaction.atomic():
+            record.save()
+
+        assert self.values() == [PartialDate(1990, 1), PartialDate(1990, 2)]
+
+    def test_create_refuses_the_value(self, rows, bad):
+        with pytest.raises(ValueError), transaction.atomic():
+            Record.objects.create(date=bad)
+
+        assert self.values() == [PartialDate(1990, 1), PartialDate(1990, 2)]
+
+    def test_update_refuses_the_value(self, rows, bad):
+        with pytest.raises(ValueError), transaction.atomic():
+            Record.objects.update(date=bad)
+
+        assert self.values() == [PartialDate(1990, 1), PartialDate(1990, 2)]
+
+    def test_bulk_create_refuses_the_value(self, rows, bad):
+        with pytest.raises(ValueError), transaction.atomic():
+            Record.objects.bulk_create([Record(date=bad)])
+
+        assert self.values() == [PartialDate(1990, 1), PartialDate(1990, 2)]
+
+    def test_bulk_update_refuses_the_value(self, rows, bad):
+        rows[0].date = bad
+
+        with pytest.raises(ValueError), transaction.atomic():
+            Record.objects.bulk_update(rows, ["date"])
+
+        assert self.values() == [PartialDate(1990, 1), PartialDate(1990, 2)]
