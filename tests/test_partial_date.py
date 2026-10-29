@@ -31,6 +31,46 @@ class TestBuilding:
         assert value.day == 14
         assert value.precision is Precision.DAY
 
+    @pytest.mark.parametrize(
+        ("year", "month", "day"),
+        [
+            (1990, None, 14),
+            (1990, 0, None),
+            (1990, 13, None),
+            (1990, 2, 30),
+            (1990, 4, 31),
+            (1990, 2, 29),
+            (1900, 2, 29),
+            (1990, 6, 0),
+            (1990, 6, 32),
+            (0, None, None),
+            (10000, None, None),
+            (-1, None, None),
+            (None, 6, None),
+            ("1990", None, None),
+            (1990, "6", None),
+            (1990, 6, "14"),
+            (1990.0, None, None),
+            (1990, 6.0, None),
+            (1990, 6, 14.0),
+            (True, None, None),
+            (1990, True, None),
+            (1990, 6, True),
+        ],
+    )
+    def test_a_refused_combination_raises_value_error(self, year, month, day):
+        with pytest.raises(ValueError):
+            PartialDate(year, month, day)
+
+    @pytest.mark.parametrize(
+        ("year", "month", "day"),
+        [(2000, 2, 29), (1, 1, 1), (9999, 12, 31), (1, None, None), (9999, 12, None)],
+    )
+    def test_the_boundary_values_build(self, year, month, day):
+        value = PartialDate(year, month, day)
+
+        assert (value.year, value.month, value.day) == (year, month, day)
+
     @pytest.mark.parametrize("part", ["year", "month", "day"])
     def test_assigning_a_part_raises_and_leaves_the_value_unchanged(self, part):
         value = PartialDate(1990, 6, 14)

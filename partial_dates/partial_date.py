@@ -1,5 +1,6 @@
 """The partial date value and its precision."""
 
+import datetime
 import enum
 from dataclasses import dataclass
 
@@ -36,6 +37,28 @@ class PartialDate:
     year: int
     month: int | None = None
     day: int | None = None
+
+    def __post_init__(self) -> None:
+        """Refuse a combination of parts that is not a date.
+
+        Raises:
+            ValueError: A part is not a whole number, a day is given without a
+                month, or the parts name a date that does not exist in years 1 to
+                9999.
+        """
+        for part in (self.year, self.month, self.day):
+            if part is not None and (type(part) is not int):
+                raise ValueError(f"A date part must be an int, not {part!r}")
+        if self.year is None:
+            raise ValueError("A partial date needs a year")
+        if self.month is None and self.day is not None:
+            raise ValueError("A day needs a month")
+        month = 1 if self.month is None else self.month
+        day = 1 if self.day is None else self.day
+        try:
+            datetime.date(self.year, month, day)
+        except (ValueError, OverflowError) as error:
+            raise ValueError(str(error)) from error
 
     @property
     def precision(self) -> Precision:
