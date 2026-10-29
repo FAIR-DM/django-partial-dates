@@ -187,6 +187,24 @@ the model that declares the field, and the package asks for no extra constraint.
 the column is also byte-order collated, so a database sort of the column is the same sort as
 `sorted()` on the values.
 
+### Fixtures
+
+`dumpdata` writes each value as its ISO form and an empty value as empty, and `loaddata` reads
+them back unchanged, in JSON, JSON Lines and XML. A fixture can be loaded into the same database
+or into the other supported one.
+
+```console
+$ python manage.py dumpdata app.Sample --format jsonl > samples.jsonl
+$ python manage.py loaddata samples.jsonl
+```
+
+```json
+{"model": "app.sample", "pk": 1, "fields": {"collected": "1990-06"}}
+{"model": "app.sample", "pk": 2, "fields": {"collected": null}}
+```
+
+A fixture holding text that is not a partial date, such as `1990-6`, is refused when it is loaded.
+
 ## Scope and philosophy
 
 **What it is:**
