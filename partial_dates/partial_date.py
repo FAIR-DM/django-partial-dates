@@ -1,4 +1,4 @@
-"""The partial date value and its precision."""
+"""The partial date value, its precision, and how two values relate."""
 
 import calendar
 import datetime

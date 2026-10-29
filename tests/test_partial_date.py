@@ -13,8 +13,6 @@ from partial_dates import PartialDate, Precision, Relation
 
 
 class TestReadingTheIsoForm:
-    """Reading accepts the three ISO forms and nothing else."""
-
     @pytest.mark.parametrize(
         ("text", "expected"),
         [
@@ -60,8 +58,6 @@ class TestReadingTheIsoForm:
 
 
 class TestWritingTheIsoForm:
-    """A partial date writes the ISO form it was recorded at."""
-
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
@@ -116,8 +112,6 @@ def pair_sample():
 
 
 class TestOrdering:
-    """Values sort in the order of their ISO forms, coarse before fine."""
-
     def test_mixed_precisions_sort_in_iso_order(self):
         values = [
             PartialDate(1991),
@@ -170,8 +164,6 @@ class TestOrdering:
 
 
 class TestEquality:
-    """Values with the same parts are the same value, and only those."""
-
     @pytest.mark.parametrize(
         ("year", "month", "day"), [(1990, None, None), (1990, 6, None), (1990, 6, 14)]
     )
@@ -223,8 +215,6 @@ class TestEquality:
 
 
 class TestPeriod:
-    """A partial date covers a period, from its first day to its last."""
-
     @pytest.mark.parametrize(
         ("value", "start", "end"),
         [
@@ -284,8 +274,6 @@ def is_earlier_at_the_coarser_precision(first, second):
 
 
 class TestRelation:
-    """Two periods are before, after or overlapping one another."""
-
     def test_relation_is_a_string_enum_exported_by_the_package(self):
         assert issubclass(Relation, enum.StrEnum)
         assert Relation.BEFORE == "before"
@@ -352,8 +340,6 @@ class TestRelation:
 
 
 class TestBuilding:
-    """A partial date holds the parts it was given and nothing more."""
-
     def test_a_year_alone_has_year_precision_and_unknown_month_and_day(self):
         value = PartialDate(1990)
 
