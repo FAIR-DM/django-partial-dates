@@ -25,7 +25,8 @@ the invented date from a recorded one.
 
 ## Status
 
-Pre-alpha. The package holds a partial date value and a model field that stores it. Forms, lookups beyond exact match and fixtures are not written yet.
+Pre-alpha. The package holds a partial date value and a model field that stores it. Lookups
+beyond exact match, and form handling, are not written yet.
 
 ## Usage
 
@@ -151,7 +152,6 @@ holds the ISO form, so a row read by any other tool shows `1990`, `1990-06` or `
 >>> sample.refresh_from_db()
 >>> sample.collected
 PartialDate(year=1990, month=6, day=None)
->>> Sample.objects.create(collected="1990-06-14").refresh_from_db()
 ```
 
 Filtering by a value, or by its ISO text, finds the rows that hold exactly that value. A row
@@ -181,11 +181,10 @@ so a field that may be empty is declared with `null=True`, and `blank=True` lets
 it out. Without `null=True` the database refuses a missing date.
 
 The database checks the column itself. It refuses any text that is not `YYYY`, `YYYY-MM` or
-`YYYY-MM-DD` naming a real date, whichever route writes it: raw SQL, a data migration or another
-program. The column check is created by the migration of
-the model that declares the field, and the package asks for no extra constraint. On PostgreSQL
-the column is also byte-order collated, so a database sort of the column is the same sort as
-`sorted()` on the values.
+`YYYY-MM-DD` naming a real date, whichever route writes it: raw SQL, a data migration or
+another program. The check is created by the migration of the model that declares the field,
+and the package asks for no extra constraint. On PostgreSQL the column is also byte-order
+collated, so a database sort of the column is the same sort as `sorted()` on the values.
 
 ### Fixtures
 

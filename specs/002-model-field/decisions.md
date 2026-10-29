@@ -150,3 +150,19 @@ and gives back. Each group leaves the tree green on its own.
   `partial_dates.fields.PartialDateField`, which is therefore a stable name.
 
 **ADR:** none — corrections to this feature's plan.
+
+## D16 — Choices made during the build
+
+- The check SQL contains no `", "` sequence. Django's SQLite introspection splits a table's SQL
+  on it to find the columns, and failed on a check that held one.
+- `value_to_string` returns `None` for an empty value, where Django's signature says `str`. The
+  serialisers write `None` as empty, which is what US-2 needs, so the override carries a type
+  ignore.
+- The test settings name `BigAutoField` as the default primary key. Django 6.0 changed the
+  default, and without it the test migration differed on Django 5.2.
+- The fixture tests compare the output of `dumpdata` with the committed files byte for byte.
+  They pass on Django 5.2, 6.0 and 6.1 and on both databases.
+- A malformed XML fixture fails with a validation error rather than a deserialisation error, so
+  the test accepts either.
+
+**ADR:** none — local to this feature's code and tests.
