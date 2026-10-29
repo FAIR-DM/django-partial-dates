@@ -128,3 +128,19 @@ The design review approved the plan with four low findings and no blocking one:
   ordered "equal" to a value it is not equal to.
 
 **ADR:** none — corrections to this feature's plan.
+
+## D15 — `relation_to` accepts any `PartialDate`, subclasses included
+
+The ordering operators use the dataclass's exact-class test so that ordering and equality agree
+(D14). `relation_to` answers from the two periods alone, through `start` and `end`, so a subclass
+gives a correct answer and nothing has to agree with it. It refuses anything that is not a
+`PartialDate` with `TypeError` (D12).
+
+**ADR:** none — local to one method.
+
+## D16 — Test classes carry no docstrings
+
+The code documentation standard leaves docstrings off test classes. The ones written during the
+build were removed at convergence (T012). The module docstring now names `Relation` as well.
+
+**ADR:** none — a standards correction inside this feature.
