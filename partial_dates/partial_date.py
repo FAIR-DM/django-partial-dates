@@ -108,6 +108,77 @@ class PartialDate:
         """Return the ISO form of the date."""
         return self.isoformat()
 
+    def __lt__(self, other: object) -> bool:
+        """Return whether this date sorts before another partial date.
+
+        Dates sort in the order of their ISO forms, so a year sorts before its
+        months and a month before its days.
+
+        Args:
+            other: The partial date to compare with.
+
+        Returns:
+            ``True`` when this date sorts strictly before ``other``.
+        """
+        if other.__class__ is not self.__class__:
+            return NotImplemented
+        return (self.year, self.month or 0, self.day or 0) < (
+            other.year,
+            other.month or 0,
+            other.day or 0,
+        )
+
+    def __le__(self, other: object) -> bool:
+        """Return whether this date sorts before or equal to another partial date.
+
+        Args:
+            other: The partial date to compare with.
+
+        Returns:
+            ``True`` when this date sorts before ``other`` or has the same parts.
+        """
+        if other.__class__ is not self.__class__:
+            return NotImplemented
+        return (self.year, self.month or 0, self.day or 0) <= (
+            other.year,
+            other.month or 0,
+            other.day or 0,
+        )
+
+    def __gt__(self, other: object) -> bool:
+        """Return whether this date sorts after another partial date.
+
+        Args:
+            other: The partial date to compare with.
+
+        Returns:
+            ``True`` when this date sorts strictly after ``other``.
+        """
+        if other.__class__ is not self.__class__:
+            return NotImplemented
+        return (self.year, self.month or 0, self.day or 0) > (
+            other.year,
+            other.month or 0,
+            other.day or 0,
+        )
+
+    def __ge__(self, other: object) -> bool:
+        """Return whether this date sorts after or equal to another partial date.
+
+        Args:
+            other: The partial date to compare with.
+
+        Returns:
+            ``True`` when this date sorts after ``other`` or has the same parts.
+        """
+        if other.__class__ is not self.__class__:
+            return NotImplemented
+        return (self.year, self.month or 0, self.day or 0) >= (
+            other.year,
+            other.month or 0,
+            other.day or 0,
+        )
+
     @property
     def precision(self) -> Precision:
         """Return how much of the date was recorded.

@@ -2,6 +2,7 @@
 
 import calendar
 import dataclasses
+import datetime
 
 import pytest
 
@@ -87,6 +88,89 @@ class TestWritingTheIsoForm:
 
                 assert read == value
                 assert read.isoformat() == text
+
+
+def every_value_in_years(*years):
+    values = []
+    for year in years:
+        values.append(PartialDate(year))
+        for month in range(1, 13):
+            values.append(PartialDate(year, month))
+            for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                values.append(PartialDate(year, month, day))
+    return values
+
+
+def pair_sample():
+    values = []
+    for year in (1999, 2000):
+        values.append(PartialDate(year))
+        for month in (1, 2, 12):
+            values.append(PartialDate(year, month))
+            for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                values.append(PartialDate(year, month, day))
+    return values
+
+
+class TestOrdering:
+    """Values sort in the order of their ISO forms, coarse before fine."""
+
+    def test_mixed_precisions_sort_in_iso_order(self):
+        values = [
+            PartialDate(1991),
+            PartialDate(1990, 6, 14),
+            PartialDate(1990),
+            PartialDate(1990, 6),
+        ]
+
+        assert sorted(values) == [
+            PartialDate(1990),
+            PartialDate(1990, 6),
+            PartialDate(1990, 6, 14),
+            PartialDate(1991),
+        ]
+
+    def test_every_value_in_two_years_sorts_as_its_iso_text(self):
+        values = every_value_in_years(1999, 2000)
+
+        assert len(values) == 757
+        assert sorted(reversed(values)) == sorted(values, key=PartialDate.isoformat)
+
+    def test_each_operator_agrees_with_iso_text_over_every_pair(self):
+        values = pair_sample()
+
+        for left in values:
+            for right in values:
+                left_text, right_text = left.isoformat(), right.isoformat()
+                assert (left < right) == (left_text < right_text)
+                assert (left <= right) == (left_text <= right_text)
+                assert (left > right) == (left_text > right_text)
+                assert (left >= right) == (left_text >= right_text)
+
+    @pytest.mark.parametrize(
+        "other",
+        [datetime.date(1990, 6, 14), "1990-06-14", 1990],
+        ids=["date", "str", "int"],
+    )
+    def test_ordering_against_another_type_raises_type_error(self, other):
+        value = PartialDate(1990, 6, 14)
+
+        with pytest.raises(TypeError):
+            value < other
+        with pytest.raises(TypeError):
+            value <= other
+        with pytest.raises(TypeError):
+            value > other
+        with pytest.raises(TypeError):
+            value >= other
+        with pytest.raises(TypeError):
+            other < value
+        with pytest.raises(TypeError):
+            other <= value
+        with pytest.raises(TypeError):
+            other > value
+        with pytest.raises(TypeError):
+            other >= value
 
 
 class TestBuilding:
