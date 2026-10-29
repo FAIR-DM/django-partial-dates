@@ -1,5 +1,6 @@
 """Tests for the partial date value."""
 
+import calendar
 import dataclasses
 
 import pytest
@@ -52,6 +53,40 @@ class TestReadingTheIsoForm:
     def test_a_non_string_raises_value_error(self, value):
         with pytest.raises(ValueError):
             PartialDate.fromisoformat(value)
+
+
+class TestWritingTheIsoForm:
+    """A partial date writes the ISO form it was recorded at."""
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (PartialDate(1990), "1990"),
+            (PartialDate(1990, 6), "1990-06"),
+            (PartialDate(1990, 6, 14), "1990-06-14"),
+            (PartialDate(990), "0990"),
+            (PartialDate(1, 1, 1), "0001-01-01"),
+        ],
+    )
+    def test_each_precision_writes_its_form(self, value, expected):
+        assert value.isoformat() == expected
+        assert str(value) == expected
+
+    def test_every_value_in_the_sample_years_round_trips(self):
+        for year in (1, 1999, 2000, 9999):
+            days = [
+                PartialDate(year, month, day)
+                for month in range(1, 13)
+                for day in range(1, calendar.monthrange(year, month)[1] + 1)
+            ]
+            months = [PartialDate(year, month) for month in range(1, 13)]
+            for value in [PartialDate(year), *months, *days]:
+                text = value.isoformat()
+
+                read = PartialDate.fromisoformat(text)
+
+                assert read == value
+                assert read.isoformat() == text
 
 
 class TestBuilding:

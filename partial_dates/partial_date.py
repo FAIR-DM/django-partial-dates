@@ -91,6 +91,23 @@ class PartialDate:
         except (ValueError, OverflowError) as error:
             raise ValueError(str(error)) from error
 
+    def isoformat(self) -> str:
+        """Return the ISO form of the date, at the precision it was recorded.
+
+        Returns:
+            ``YYYY``, ``YYYY-MM`` or ``YYYY-MM-DD``, zero-padded.
+        """
+        text = f"{self.year:04d}"
+        if self.month is not None:
+            text += f"-{self.month:02d}"
+        if self.day is not None:
+            text += f"-{self.day:02d}"
+        return text
+
+    def __str__(self) -> str:
+        """Return the ISO form of the date."""
+        return self.isoformat()
+
     @property
     def precision(self) -> Precision:
         """Return how much of the date was recorded.
