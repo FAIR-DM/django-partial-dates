@@ -99,3 +99,37 @@ The feature changes no screen. Until R4 the field appears in forms and the admin
 shows a plain text field.
 
 **ADR:** none.
+
+## D11 — The field subclasses `models.Field`, with a `CharField` column
+
+`CharField` adds a length validator that calls `len()` on the cleaned value, which is a partial
+date value, and converts every value to text. Subclassing `models.Field` and naming `CharField`
+as the internal type gives the `varchar(10)` column on every backend without either (research R1).
+
+**ADR:** none — an implementation choice inside one class, invisible to a developer using it.
+
+## D12 — The collation and the check come from the field, not from the migration
+
+The collation is set per backend in `db_parameters()` and the check is the field's column check,
+`db_check()`, which the schema editor writes into the column definition (research R2 and R3).
+Neither appears as an argument in a migration, so a developer declares nothing and a second
+`makemigrations` finds nothing. The cost: if a later release changes the check, existing columns
+keep the old one until the field is altered, so a change to the check ships with a migration
+operation that rewrites it, as Constitution Article XIII asks of storage changes.
+
+**ADR:** none — ADR 0001 already fixes the collation and the check; this is where Django lets a
+field supply them.
+
+## D13 — psycopg 3 as a development dependency
+
+The PostgreSQL run needs a driver. `psycopg[binary]` is added to the development group only, so
+projects choose their own driver at runtime.
+
+**ADR:** none — a test-only dependency.
+
+## D14 — Two dispatch groups for US-1
+
+US-1 holds eight tasks over two concerns: the column and its check, then what the field takes in
+and gives back. Each group leaves the tree green on its own.
+
+**ADR:** none — how the build is divided.

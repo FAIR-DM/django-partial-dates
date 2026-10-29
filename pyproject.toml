@@ -38,6 +38,7 @@ Changelog = "https://github.com/FAIR-DM/django-partial-dates/blob/main/CHANGELOG
 dev = [
     "mvp-shared[dev,test]",
     # The pre-commit template runs pydoclint, which the bundle at v0.6.0 does not carry.
+    "psycopg[binary]>=3.2",
     "pydoclint>=0.10.1",
 ]
 
