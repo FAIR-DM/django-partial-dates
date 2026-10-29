@@ -4,7 +4,7 @@ from django.db import DataError, IntegrityError, connection, transaction
 from django.db.migrations.writer import MigrationWriter
 
 from partial_dates import PartialDate, PartialDateField
-from tests.models import Record
+from tests.models import Event, Record
 
 
 @pytest.mark.django_db
@@ -170,3 +170,80 @@ class TestDatabaseCheck:
     def test_each_field_of_a_model_is_checked_on_its_own(self, column):
         with pytest.raises(IntegrityError):
             self.insert(column, "1990-6")
+
+
+@pytest.mark.django_db
+class TestSavingAndReading:
+    def stored(self, pk, column="date"):
+        sql = (
+            f"SELECT {connection.ops.quote_name(column)} "
+            f"FROM {connection.ops.quote_name(Record._meta.db_table)} "
+            f"WHERE {connection.ops.quote_name('id')} = %s"
+        )
+        with connection.cursor() as cursor:
+            cursor.execute(sql, [pk])
+            return cursor.fetchone()[0]
+
+    @pytest.mark.parametrize(
+        ("value", "text"),
+        [
+            (PartialDate(1990), "1990"),
+            (PartialDate(1990, 6), "1990-06"),
+            (PartialDate(1990, 6, 14), "1990-06-14"),
+            (PartialDate(1), "0001"),
+            (PartialDate(990), "0990"),
+            (PartialDate(9999, 12, 31), "9999-12-31"),
+        ],
+    )
+    def test_a_partial_date_is_stored_as_its_iso_form_and_read_back_equal(
+        self, value, text
+    ):
+        record = Record.objects.create(date=value)
+
+        record.refresh_from_db()
+
+        assert record.date == value
+        assert self.stored(record.pk) == text
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("1990", PartialDate(1990)),
+            ("1990-06", PartialDate(1990, 6)),
+            ("1990-06-14", PartialDate(1990, 6, 14)),
+        ],
+    )
+    def test_iso_text_is_saved_and_read_back_as_the_value(self, text, expected):
+        record = Record.objects.create(date=text)
+
+        record.refresh_from_db()
+
+        assert record.date == expected
+        assert self.stored(record.pk) == text
+
+    @pytest.mark.parametrize("empty", [None, ""])
+    def test_an_empty_value_is_stored_as_null(self, empty):
+        record = Record.objects.create(date=empty)
+
+        record.refresh_from_db()
+
+        assert record.date is None
+        assert self.stored(record.pk) is None
+
+    def test_a_required_field_left_empty_is_refused_by_the_database(self):
+        with pytest.raises(IntegrityError):
+            Event.objects.create()
+
+    def test_a_default_given_as_text_is_stored(self):
+        record = Record.objects.create()
+
+        record.refresh_from_db()
+
+        assert record.defaulted == PartialDate(1990)
+
+    def test_a_default_given_as_a_partial_date_is_stored(self):
+        field = PartialDateField(default=PartialDate(1990))
+        field.set_attributes_from_name("when")
+
+        assert field.get_default() == PartialDate(1990)
+        assert field.get_prep_value(field.get_default()) == "1990"

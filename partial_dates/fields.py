@@ -135,3 +135,22 @@ class PartialDateField(models.Field):
             `None`, or the partial date the text records.
         """
         return None if value is None else PartialDate.fromisoformat(value)
+
+    def get_prep_value(self, value: Any) -> str | None:
+        """Turn a value into the text stored in the column.
+
+        A value that is not a partial date makes `PartialDate.fromisoformat` raise
+        `ValueError`, before any query runs.
+
+        Args:
+            value: A `PartialDate`, its ISO text, `""` or `None`.
+
+        Returns:
+            `None` for `None` and `""`, otherwise the ISO form of the value.
+        """
+        value = super().get_prep_value(value)
+        if value is None or value == "":
+            return None
+        if isinstance(value, PartialDate):
+            return value.isoformat()
+        return PartialDate.fromisoformat(value).isoformat()
