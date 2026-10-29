@@ -20,7 +20,7 @@ tests/test_partial_date.py::TestReadingTheIsoForm tests/test_partial_date.py::Te
   US1.6, and that assigning a part raises and leaves the value unchanged (US1.12, SC-001)
 - [ ] T002 [US1] Validation in `__post_init__`: a day without a month, a month outside 1–12, a day
   the month does not have (`1990-02-30`, `1990-04-31`, `1990-02-29`, `1900-02-29`), years 0 and
-  10000, a part that is a `str`, a `float` or a `bool` — each raises `ValueError`. `2000-02-29`,
+  10000, a year of `None` (`PartialDate(None, 6)`), a part that is a `str`, a `float` or a `bool` — each raises `ValueError`. `2000-02-29`,
   `0001-01-01` and `9999-12-31` build. Tests in `TestBuilding` (US1.7–US1.9, US1.11, US1.13,
   edge cases)
 - [ ] T003 [US1] `fromisoformat` classmethod. Tests in `TestReadingTheIsoForm`: the three forms

@@ -76,8 +76,10 @@ when `self.start > other.end`, and `Relation.OVERLAPPING` otherwise. Because eve
 whole year, a whole month or a single day, two periods are always nested or apart, so
 "overlapping" means one holds the other or they are the same.
 
-This is the same answer as FairDM's `precedes()` for "before": that helper truncates both dates to
-the coarser precision and compares, and a truncated value is earlier exactly when its whole period
+This is the same answer as FairDM's `precedes()` for "before" (`fairdm/core/dates.py`, lines 12–31,
+on FairDM's main branch of 2026-10-29): that helper takes the coarser of the two precisions,
+compares the years, the year and month tuples, or the full dates at that precision with a strict
+`<`, and a truncated value is earlier exactly when its whole period
 ends before the other's starts. SC-003 is shown by a test that implements the coarser-precision
 rule independently and compares the two over every pair in a sample.
 
@@ -89,8 +91,9 @@ own comparisons raise for the same mistake.
 
 `Precision` and `Relation` are `enum.StrEnum`s (Python 3.11 and later, and the package needs
 3.12). Their values are `"year"`, `"month"`, `"day"` and `"before"`, `"after"`, `"overlapping"`.
-A string value prints readably and can be stored or compared to a string by a caller. Neither enum
-is ordered: the precisions are not compared anywhere in this feature.
+A string value prints readably and can be stored or compared to a string by a caller. Members
+compare as text, so `sorted(Precision)` is alphabetical. That order carries no meaning, and the
+`Precision` docstring says so: nothing in this feature compares precisions.
 
 ## R9 — Dependencies
 

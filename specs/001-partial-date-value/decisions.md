@@ -115,3 +115,16 @@ days start at 1. The key is computed in each method rather than stored, so equal
 stay on the recorded parts.
 
 **ADR:** none — an implementation detail of one class.
+
+## D14 — Design review: four low findings, all applied as edits
+
+The design review approved the plan with four low findings and no blocking one:
+
+- A `None` year is named among the refused inputs in T002.
+- `Precision` members order alphabetically, as text. The research and the class docstring say that
+  order carries no meaning.
+- The FairDM rule SC-003 is held to is cited by file and line in `research.md` R7.
+- Ordering uses the same exact-class test as the dataclass's equality, so a subclass can never be
+  ordered "equal" to a value it is not equal to.
+
+**ADR:** none — corrections to this feature's plan.

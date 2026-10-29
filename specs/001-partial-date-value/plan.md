@@ -62,15 +62,18 @@ No violations.
 
 | Member | Behaviour | Requirement |
 |---|---|---|
-| `__post_init__` | Refuses, with `ValueError`: a part that is not an `int` or is a `bool`; a day without a month; any combination `datetime.date(year, month or 1, day or 1)` refuses | FR-001, FR-005, FR-006 |
+| `__post_init__` | Refuses, with `ValueError`, checking types first because `date()` raises `TypeError` for a `float`: a part that is not an `int` or is a `bool` (a `None` year included); a day without a month; any combination `datetime.date(year, month or 1, day or 1)` refuses | FR-001, FR-005, FR-006 |
 | `fromisoformat(text)` classmethod | `re.fullmatch(r"([0-9]{4})(?:-([0-9]{2})(?:-([0-9]{2}))?)?", text)`. No match, or `text` not a `str` → `ValueError`. Otherwise `cls(int(y), int(m) if m else None, int(d) if d else None)` | FR-002, FR-005 |
 | `isoformat()` | `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, zero-padded | FR-004 |
 | `__str__` | `self.isoformat()` | FR-004 |
 | `precision` property | `Precision.DAY` if day, `Precision.MONTH` if month, else `Precision.YEAR` | FR-003 |
 | `start` property | `date(year, month or 1, day or 1)` | FR-011 |
 | `end` property | `date(year, month or 12, day or calendar.monthrange(year, month or 12)[1])` | FR-011 |
-| `__lt__`, `__le__`, `__gt__`, `__ge__` | Compare `(year, month or 0, day or 0)` of both. Another type → `NotImplemented` | FR-008, FR-010 |
+| `__lt__`, `__le__`, `__gt__`, `__ge__` | Compare `(year, month or 0, day or 0)` of both. `other.__class__ is not self.__class__` → `NotImplemented`, the same class test the dataclass's `__eq__` makes, so ordering and equality never disagree for a subclass | FR-008, FR-010 |
 | `relation_to(other)` | Not a `PartialDate` → `TypeError`. `self.end < other.start` → `BEFORE`. `self.start > other.end` → `AFTER`. Otherwise `OVERLAPPING` | FR-012, FR-013 |
+
+Errors: refused values raise `ValueError` (building and reading, FR-006). A value of the wrong type
+as the other operand of an ordering operator or `relation_to` raises `TypeError` (D12).
 
 Equality, hashing, immutability and `repr` come from the dataclass. Equality against another type
 is `NotImplemented` and so `False` (FR-009, FR-010). Setting a field raises
