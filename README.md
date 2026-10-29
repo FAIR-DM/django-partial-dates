@@ -7,6 +7,7 @@
 [![PyPI](https://img.shields.io/pypi/v/django-partial-dates)](https://pypi.org/project/django-partial-dates/)
 [![Development status](https://img.shields.io/pypi/status/django-partial-dates)](https://pypi.org/project/django-partial-dates/)
 [![Python](https://img.shields.io/pypi/pyversions/django-partial-dates)](https://pypi.org/project/django-partial-dates/)
+[![Django](https://img.shields.io/pypi/djversions/django-partial-dates)](https://pypi.org/project/django-partial-dates/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Licence](https://img.shields.io/github/license/FAIR-DM/django-partial-dates)](https://github.com/FAIR-DM/django-partial-dates/blob/main/LICENSE)
 
@@ -57,8 +58,9 @@ This package replaces [django-partial-date](https://github.com/ktowen/django_par
 has had no release since January 2022. That package stores a partial date as a timestamp with
 the precision held in its seconds. [python-edtf](https://github.com/ixc/python-edtf) implements
 the whole of EDTF and ships a Django field that needs four extra columns on every model for
-filtering and sorting. [docs/brainstorm.md](docs/brainstorm.md) compares them.
+filtering and sorting. [ADR 0001](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/adr/0001-store-partial-dates-as-iso-8601-strings.md) records how this package stores a
+partial date and why. [Prior art](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/reference/prior-art.md) compares them.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/FAIR-DM/django-partial-dates/blob/main/LICENSE).
