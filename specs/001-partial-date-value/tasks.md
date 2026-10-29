@@ -45,7 +45,7 @@ tests/test_partial_date.py::TestEquality`
 
 ### Group 1
 
-- [x] T006 [US2] `__lt__`, `__le__`, `__gt__`, `__ge__` over the sort key. Tests in
+- [x] T006 [US2] `__lt__`, `__le__`, `__gt__`, `__ge__` comparing the ISO forms. Tests in
   `TestOrdering`: the mixed list sorts as US2.1 says (SC-001), sorting every value in 1999–2000
   gives the order of their ISO forms as text (US2.2, SC-002), each operator agrees with text
   comparison over every pair of the plan's pair sample (US2.3), and ordering against a `date`, a
@@ -86,6 +86,14 @@ tests/test_partial_date.py::TestRelation`
 
 - [x] T012 [US1] Remove the docstrings from the test classes, as the code documentation standard
   requires, and name `Relation` in the module docstring
+
+## Code review
+
+- [x] T013 [US3] Make the sweep over every value in 1999 and 2000 check that `start` and `end` are the
+  first and last day of the period, so it fails when either is wrong
+- [x] T014 [US3] Remove the test that pinned `Relation`'s base class and string values
+- [x] T015 [US2] Compare the ISO forms in the four ordering methods instead of a key written out
+  four times
 
 ## Dependencies
 

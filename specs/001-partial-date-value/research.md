@@ -27,10 +27,10 @@ from the standard library:
 - a readable `repr`, pickling and copying.
 
 Ordering is not taken from the dataclass. `order=True` compares the field tuples, and a `None`
-month against an integer month raises `TypeError`. The four ordering methods compare a sort key
-instead, `(year, month or 0, day or 0)`. Months and days start at 1, so an unknown part sorts
-before every known one, which is exactly ISO text order: `1990` < `1990-01` < `1990-01-01` <
-`1990-02`. Each method returns `NotImplemented` for another type, which makes Python raise
+month against an integer month raises `TypeError`. The four ordering methods compare the ISO
+forms of both values as text instead. Every part is zero-padded and fixed-width, so text order is
+date order, and a year sorts before its months and a month before its days: `1990` < `1990-01` <
+`1990-01-01` < `1990-02`. Each method returns `NotImplemented` for another type, which makes Python raise
 `TypeError` (FR-008, FR-010). `functools.total_ordering` is not used: four one-line methods read
 more plainly than a decorator that derives three of them.
 
@@ -128,6 +128,6 @@ drawing random ones, so a failure always reproduces. No new test dependency.
 | Last day of a month | The standard library: `calendar.monthrange` |
 | Matching the ISO form | The standard library: `re.fullmatch` |
 | The value type itself | New code. The replaced `partial_date.PartialDate` carries the defects in `docs/reference/prior-art.md`. `python-edtf` covers the forms but is a dependency far beyond three forms, rejected in the same document |
-| Ordering by ISO order | New code: four methods over a sort key. `dataclass(order=True)` cannot compare `None` with an integer |
+| Ordering by ISO order | New code: four methods comparing `isoformat()`. `dataclass(order=True)` cannot compare `None` with an integer |
 | The before / after / overlapping comparison | New code. FairDM's `precedes()` answers only "before", lives in FairDM, and is the rule this replaces |
 | `Precision` and `Relation` | New code: two small `StrEnum`s |

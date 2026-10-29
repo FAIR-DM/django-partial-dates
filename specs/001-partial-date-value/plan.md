@@ -69,7 +69,7 @@ No violations.
 | `precision` property | `Precision.DAY` if day, `Precision.MONTH` if month, else `Precision.YEAR` | FR-003 |
 | `start` property | `date(year, month or 1, day or 1)` | FR-011 |
 | `end` property | `date(year, month or 12, day or calendar.monthrange(year, month or 12)[1])` | FR-011 |
-| `__lt__`, `__le__`, `__gt__`, `__ge__` | Compare `(year, month or 0, day or 0)` of both. `other.__class__ is not self.__class__` → `NotImplemented`, the same class test the dataclass's `__eq__` makes, so ordering and equality never disagree for a subclass | FR-008, FR-010 |
+| `__lt__`, `__le__`, `__gt__`, `__ge__` | Compare the ISO forms of both as text, the order FR-008 states. `other.__class__ is not self.__class__` → `NotImplemented`, the same class test the dataclass's `__eq__` makes, so ordering and equality never disagree for a subclass | FR-008, FR-010 |
 | `relation_to(other)` | Not a `PartialDate` → `TypeError`. `self.end < other.start` → `BEFORE`. `self.start > other.end` → `AFTER`. Otherwise `OVERLAPPING` | FR-012, FR-013 |
 
 Errors: refused values raise `ValueError` (building and reading, FR-006). A value of the wrong type
@@ -77,12 +77,9 @@ as the other operand of an ordering operator or `relation_to` raises `TypeError`
 
 Equality, hashing, immutability and `repr` come from the dataclass. Equality against another type
 is `NotImplemented` and so `False` (FR-009, FR-010). Setting a field raises
-`dataclasses.FrozenInstanceError` (FR-007). The sort key is computed inline in each ordering
-method, so the class adds no public name beyond the table. No name in the module starts with an
-underscore.
-
-The sort key is read once, in the method, from both sides. It is never stored as a field, so
-equality and hashing stay on the recorded parts alone.
+`dataclasses.FrozenInstanceError` (FR-007). The ordering methods compare `isoformat()` of both
+sides, so the class adds no public name beyond the table and nothing is stored beyond the
+recorded parts. No name in the module starts with an underscore.
 
 ### Tests
 

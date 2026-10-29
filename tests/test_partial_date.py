@@ -3,12 +3,10 @@
 import calendar
 import dataclasses
 import datetime
-import enum
 import operator
 
 import pytest
 
-import partial_dates
 from partial_dates import PartialDate, Precision, Relation
 
 
@@ -256,10 +254,16 @@ class TestPeriod:
         assert type(value.start) is datetime.date
         assert type(value.end) is datetime.date
 
-    def test_start_and_end_of_every_value_in_two_years_bound_the_period(self):
+    def test_start_and_end_of_every_value_in_two_years_are_its_first_and_last_day(
+        self,
+    ):
+        one_day = datetime.timedelta(days=1)
         for value in every_value_in_years(1999, 2000):
-            assert value.start <= value.end
-            assert value.start.year == value.end.year == value.year
+            text = value.isoformat()
+            assert value.start.isoformat().startswith(text)
+            assert value.end.isoformat().startswith(text)
+            assert not (value.start - one_day).isoformat().startswith(text)
+            assert not (value.end + one_day).isoformat().startswith(text)
 
 
 def parts_known(value):
@@ -274,13 +278,6 @@ def is_earlier_at_the_coarser_precision(first, second):
 
 
 class TestRelation:
-    def test_relation_is_a_string_enum_exported_by_the_package(self):
-        assert issubclass(Relation, enum.StrEnum)
-        assert Relation.BEFORE == "before"
-        assert Relation.AFTER == "after"
-        assert Relation.OVERLAPPING == "overlapping"
-        assert "Relation" in partial_dates.__all__
-
     @pytest.mark.parametrize(
         ("first", "second", "expected"),
         [

@@ -131,11 +131,7 @@ class PartialDate:
         """
         if other.__class__ is not self.__class__:
             return NotImplemented
-        return (self.year, self.month or 0, self.day or 0) < (
-            other.year,
-            other.month or 0,
-            other.day or 0,
-        )
+        return self.isoformat() < other.isoformat()
 
     def __le__(self, other: object) -> bool:
         """Return whether this date sorts before or equal to another partial date.
@@ -148,11 +144,7 @@ class PartialDate:
         """
         if other.__class__ is not self.__class__:
             return NotImplemented
-        return (self.year, self.month or 0, self.day or 0) <= (
-            other.year,
-            other.month or 0,
-            other.day or 0,
-        )
+        return self.isoformat() <= other.isoformat()
 
     def __gt__(self, other: object) -> bool:
         """Return whether this date sorts after another partial date.
@@ -165,11 +157,7 @@ class PartialDate:
         """
         if other.__class__ is not self.__class__:
             return NotImplemented
-        return (self.year, self.month or 0, self.day or 0) > (
-            other.year,
-            other.month or 0,
-            other.day or 0,
-        )
+        return self.isoformat() > other.isoformat()
 
     def __ge__(self, other: object) -> bool:
         """Return whether this date sorts after or equal to another partial date.
@@ -182,11 +170,7 @@ class PartialDate:
         """
         if other.__class__ is not self.__class__:
             return NotImplemented
-        return (self.year, self.month or 0, self.day or 0) >= (
-            other.year,
-            other.month or 0,
-            other.day or 0,
-        )
+        return self.isoformat() >= other.isoformat()
 
     @property
     def precision(self) -> Precision:

@@ -107,12 +107,14 @@ raise for that mistake, and what the ordering operators raise here. Refused valu
 
 **ADR:** none — local to one method.
 
-## D13 — Ordering is four methods over a sort key, not `dataclass(order=True)`
+## D13 — Ordering is four methods comparing the ISO forms, not `dataclass(order=True)`
 
 `order=True` compares the raw fields, and a `None` month against an integer month raises
-`TypeError`. The sort key `(year, month or 0, day or 0)` gives ISO text order because months and
-days start at 1. The key is computed in each method rather than stored, so equality and hashing
-stay on the recorded parts.
+`TypeError`. Each ordering method compares `isoformat()` of the two values, which is the rule
+FR-008 states and the order the database will give the stored text. The build first compared a
+tuple key written out in all four methods. The code review asked for the ISO forms instead, so the
+rule lives in one place, `isoformat()`. Nothing extra is stored, so equality and hashing stay on
+the recorded parts.
 
 **ADR:** none — an implementation detail of one class.
 
@@ -144,3 +146,19 @@ The code documentation standard leaves docstrings off test classes. The ones wri
 build were removed at convergence (T012). The module docstring now names `Relation` as well.
 
 **ADR:** none — a standards correction inside this feature.
+
+## D17 — Code review: four low findings, three fixed and one declined
+
+The code review approved the build with four low findings:
+
+- The sweep over every value in 1999 and 2000 could not fail on a wrong `start` or `end`. It now
+  checks that both are inside the period and the days beyond them are not. Shown to fail when `end`
+  returns `start` and when `start` returns 1 January (T013).
+- A test pinned `Relation`'s base class and string values, which only a deliberate change could
+  break. Removed (T014).
+- The ordering rule was written out in four places. The methods now compare the ISO forms (T015,
+  D13).
+- Declined: moving the two sample builders into `conftest.py`. They are plain lists used by one
+  test module, not shared setup, and fixtures would add indirection without a second user.
+
+**ADR:** none — corrections inside this feature.
