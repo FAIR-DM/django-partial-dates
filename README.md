@@ -25,8 +25,9 @@ the invented date from a recorded one.
 
 ## Status
 
-Pre-alpha. The package holds a partial date value and a model field that stores it. Lookups
-beyond exact match, and form handling, are not written yet.
+Pre-alpha. The package holds a partial date value and a model field that stores it, and the
+field filters by year, month, day and range in the database. Ordering and grouping helpers, and
+form handling, are not written yet.
 
 ## Usage
 
@@ -203,6 +204,20 @@ $ python manage.py loaddata samples.jsonl
 ```
 
 A fixture holding text that is not a partial date, such as `1990-6`, is refused when it is loaded.
+
+## Querying
+
+The field filters in the database by the year, month and day of a date, and by a range whose
+bounds are partial dates. A date that might or might not match a filter has one defined result.
+
+```python
+Sample.objects.filter(collected__month=6)  # 1990-06 and 1990-06-14, but not 1990
+Sample.objects.filter(collected__gte="1990-06", collected__lt="1991")
+```
+
+The [querying guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/querying.md)
+says which uncertain dates each filter includes, and gives recipes for June of any year and for
+the other rules a range can follow.
 
 ## Scope and philosophy
 

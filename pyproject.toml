@@ -93,9 +93,10 @@ extend_exclude = ["tests/", "docs/"]
 
 [tool.forge.conformance]
 # tests/test_init.py tests the package's top-level module, partial_dates/__init__.py, which the
-# mirror rule cannot name. The test app's models, migrations and fixtures are not modules under test.
+# mirror rule cannot name. tests/test_guide.py tests a documentation page, not a module. The test app's models, migrations and fixtures are not modules under test.
 non-mirror-paths = [
     "tests/test_init.py",
+    "tests/test_guide.py",
     "tests/models.py",
     "tests/test_models.py",
     "tests/migrations/",

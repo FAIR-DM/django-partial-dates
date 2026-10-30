@@ -21,6 +21,14 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   finds rows by exact match on a value or its text. The database refuses malformed text
   itself, by any route. `dumpdata` writes each value as its ISO form and each empty value as
   empty, and `loaddata` reads them back, in JSON, JSON Lines and XML.
+- `year`, `month` and `day` lookups on `PartialDateField`, each taking a whole number and
+  finding the rows whose recorded part equals it. A date with that part unknown is never found.
+  They combine with `gt`, `gte`, `lt`, `lte`, `in`, `range` and `isnull`, and a filter on one
+  year uses an index on the column. Range filters take a `PartialDate` or its ISO form as a
+  bound and compare by the order of the ISO form.
+- The developer guide: installation, and a querying page that states which uncertain dates each
+  filter includes, with recipes for June of any year and for adding every uncertain date to a
+  range, leaving every one out, and taking in the whole of a month or year.
 - Continuous integration runs the whole test suite on PostgreSQL 17, on Django 5.2 and 6.1,
   alongside the SQLite matrix.
 - The package skeleton: packaging, continuous integration and the release flow.

@@ -64,3 +64,26 @@ def query_plan(db):
         return queryset.explain()
 
     return plan
+
+
+@pytest.fixture
+def guide_samples(db):
+    """The rows the developer guide's examples run against."""
+    texts = [
+        "1990",
+        "1990-05",
+        "1990-05-31",
+        "1990-06",
+        "1990-06-01",
+        "1990-06-14",
+        "1990-07",
+        "1990-12",
+        "1991",
+        "1991-03",
+        "1991-03-15",
+        "1991-04",
+        "1991-06",
+        "1991-06-02",
+        None,
+    ]
+    return [SampleFactory(collected=text) for text in texts]
