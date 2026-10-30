@@ -3,6 +3,8 @@ from html.parser import HTMLParser
 
 import pytest
 from django import forms
+from django.utils import translation
+from django.utils.dates import MONTHS
 
 from partial_dates import PartialDate
 from partial_dates.forms import PartialDateField
@@ -302,3 +304,71 @@ class TestEveryCombination:
             codes = {error.code for error in form.errors.as_data()["when"]}
             assert codes
             assert codes <= {"required", "incomplete", "invalid"}
+
+
+class TestAcrossLanguages:
+    @pytest.mark.parametrize("language", ["en", "de", "ja"])
+    def test_the_selects_keep_the_order_year_month_day(self, language):
+        form = make_form()()
+
+        with translation.override(language):
+            page = render(form)
+
+        assert list(page.selects) == ["when_year", "when_month", "when_day"]
+
+    @pytest.mark.parametrize("language", ["en", "de", "ja"])
+    def test_each_month_is_named_in_the_active_language(self, language):
+        form = make_form()()
+
+        with translation.override(language):
+            page = render(form)
+            named = {number: str(name) for number, name in MONTHS.items()}
+
+        labels = {
+            int(option["value"]): option["label"]
+            for option in page.selects["when_month"]["options"]
+            if option["value"]
+        }
+        assert labels == named
+
+    def test_the_month_names_follow_the_language(self):
+        form = make_form()()
+
+        with translation.override("en"):
+            english = render(form).selects["when_month"]["options"]
+        with translation.override("de"):
+            german = render(form).selects["when_month"]["options"]
+
+        assert english[3]["label"] != german[3]["label"]
+
+
+class TestAssistiveUse:
+    def test_each_select_has_a_name_of_its_own(self):
+        page = render(make_form()())
+
+        names = [select["attrs"].get("aria-label") for select in page.selects.values()]
+        assert all(names)
+        assert len(set(names)) == len(PARTS)
+
+    def test_the_year_is_the_first_select(self):
+        page = render(make_form()())
+
+        assert next(iter(page.selects)) == "when_year"
+
+    def test_the_field_is_a_fieldset_led_by_its_label_as_the_legend(self):
+        form = make_form()()
+
+        page = render(form)
+
+        assert "fieldset" in page.tags
+        assert page.legend.strip().startswith(str(form["when"].label))
+
+
+class TestNoScript:
+    def test_the_form_needs_no_media(self):
+        assert str(make_form()().media) == ""
+
+    def test_the_render_holds_no_script(self):
+        page = render(make_form()())
+
+        assert "script" not in page.tags

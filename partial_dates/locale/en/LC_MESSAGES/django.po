@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-30 00:40+0100\n"
+"POT-Creation-Date: 2026-10-30 05:48-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,11 +17,32 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-#: fields.py:32
+
+#: fields.py:35
 msgid "A date known to the year, the month or the day"
 msgstr ""
 
-#: fields.py:36
+#: fields.py:39
 #, python-format
 msgid "“%(value)s” is not a date as YYYY, YYYY-MM or YYYY-MM-DD."
+msgstr ""
+
+#: forms.py:37 forms.py:93
+msgid "Year"
+msgstr ""
+
+#: forms.py:40 forms.py:41
+msgid "Month"
+msgstr ""
+
+#: forms.py:44 forms.py:45
+msgid "Day"
+msgstr ""
+
+#: forms.py:114
+msgid "Enter a year, and a month as well when you enter a day."
+msgstr ""
+
+#: forms.py:115
+msgid "Enter a date that exists."
 msgstr ""
