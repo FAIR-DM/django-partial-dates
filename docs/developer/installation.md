@@ -16,6 +16,12 @@ The field, the form field, the lookups and `PartialDate.display_form()` need no 
 installed app. [Showing a partial date](showing.md) says how to add it. The package brings in
 Django and nothing else, and its app adds no model and needs no migration.
 
+To filter a list of records with django-filter, install the extra instead:
+`pip install "django-partial-dates[django-filter]"`. The [filtering guide](filtering.md) covers
+the filters it adds. To expose a partial date through Django REST framework, install the
+`djangorestframework` extra: `pip install "django-partial-dates[djangorestframework]"`. The
+[Django REST framework guide](rest-framework.md) covers the serializer field it adds.
+
 ## Add the field to a model
 
 Declare `PartialDateField` as you would a `DateField`. It stores one ten-character text column,

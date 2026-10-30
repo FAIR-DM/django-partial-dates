@@ -86,6 +86,24 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `OldPartialDateField`, a field that existing migrations use in place of django-partial-date's,
   so they describe the same column and a project can uninstall that package.
 - A guide to moving from django-partial-date.
+- `PartialDateFilter` and `PartialDateRangeFilter` in `partial_dates.filters`, filters for a
+  django-filter `FilterSet`, installed with the `django-filter` extra. `PartialDateFilter`
+  takes `exact`, `gt`, `gte`, `lt` and `lte` with a partial date, and `year`, `month` and `day`
+  with a whole number. `PartialDateRangeFilter` reads `<name>_after` and `<name>_before`, finds
+  a row at or after the first bound and at or before the last day of the period of the second,
+  and applies both bounds to the same date across a relation. Both show the year, month and day
+  selects, read the ISO form under the filter's own name, accept `years`, and report an entry
+  that is not a partial date as an error on the filter. Mapping `PartialDateField` to
+  `PartialDateFilter` in `Meta.filter_overrides` lets `Meta.fields` name it. Nothing imports
+  Django REST framework.
+- A guide to filtering with django-filter that states which uncertain dates each filter includes.
+- `PartialDateField` in `partial_dates.rest_framework`, a serializer field for Django REST
+  framework, installed with the `djangorestframework` extra. It writes a `PartialDate` as its ISO
+  form and no date as `null`, reads an ISO form or a `PartialDate`, and refuses anything else,
+  including an empty string, with the code `invalid`. Its other options behave as on any
+  Django REST framework field. Nothing imports django-filter.
+- A guide to exposing a partial date through Django REST framework, including how to require a
+  date on a `ModelSerializer`.
 - The developer guide: installation, a page on entering a partial date in a form, in a model form
   and in the admin, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a

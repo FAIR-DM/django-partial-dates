@@ -29,7 +29,8 @@ Pre-alpha. The package holds a partial date value and a model field that stores 
 field filters, orders, selects and groups by year, month, day and range in the database. A form
 field and widget enter a partial date as a year, a month and a day select. The model field gives
 them to model forms and the admin, so there is nothing to configure. A migration operation converts
-a column written by django-partial-date.
+a column written by django-partial-date. Two optional extras add ready-made filters for django-filter
+and a serializer field for Django REST framework.
 
 ## Usage
 
@@ -283,6 +284,60 @@ The [querying guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/d
 says which uncertain dates each filter includes, and gives recipes for June of any year, a date
 axis, a drilldown from year to day, and the other rules a range can follow. It also says where
 each database sorts a row holding no date, and how to choose.
+
+## Filtering with django-filter
+
+Install the `django-filter` extra to filter a list of records by a partial date. The extra adds
+django-filter and nothing else, and the core package never imports it.
+
+```console
+$ pip install "django-partial-dates[django-filter]"
+```
+
+```python
+import django_filters
+
+from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
+
+
+class SampleFilter(django_filters.FilterSet):
+    collected = PartialDateFilter()
+    when = PartialDateRangeFilter(field_name="collected")
+```
+
+A person sees the year, month and day selects and gives as much of the date as they know, and an
+API client sends the ISO form, as in `?when_after=1990-06&when_before=1991-03`. An entry that is
+not a partial date is reported as an error on the filter. The range includes the whole of the
+period its second bound names, so `1991-03` takes in `1991-03-15`. The
+[filtering guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/filtering.md)
+says which uncertain dates each filter includes, how to filter on a year, month or day and across
+a relation, and how to ask for another rule.
+
+## Django REST framework
+
+Install the `djangorestframework` extra to read and write a partial date in an API. The extra
+adds Django REST framework and nothing else, and the core package never imports it.
+
+```console
+$ pip install "django-partial-dates[djangorestframework]"
+```
+
+```python
+from rest_framework import serializers
+
+from partial_dates.rest_framework import PartialDateField
+
+
+class SampleSerializer(serializers.Serializer):
+    collected = PartialDateField()
+```
+
+A client reads `1990`, `1990-06` or `1990-06-14`, or `null` when a record has no date, and writes
+the same text. Anything else, including an empty string, is reported as a validation error with
+the code `invalid`. The
+[Django REST framework guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/rest-framework.md)
+shows how to save the value with a `ModelSerializer`, how to require a date, and how to use the
+field across a project.
 
 ## Moving from django-partial-date
 

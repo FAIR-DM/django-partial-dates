@@ -25,6 +25,10 @@ classifiers = [
 ]
 dependencies = ["django>=5.2"]
 
+[project.optional-dependencies]
+django-filter = ["django-filter>=26.2"]
+djangorestframework = ["djangorestframework>=3.18"]
+
 [project.urls]
 Homepage = "https://github.com/FAIR-DM/django-partial-dates"
 Repository = "https://github.com/FAIR-DM/django-partial-dates"
@@ -37,6 +41,9 @@ dev = [
     "mvp-shared[dev,test]",
     # The tests round-trip values through it. It is never a runtime dependency.
     "django-reversion>=6.5.0",
+    # The extras' tests need both libraries in every test environment.
+    "django-filter>=26.2",
+    "djangorestframework>=3.18",
     # The pre-commit template runs pydoclint, which the bundle at v0.6.0 does not carry.
     "psycopg[binary]>=3.2",
     "pydoclint>=0.10.1",

@@ -4,15 +4,19 @@ import re
 import textwrap
 from pathlib import Path
 
+import django_filters
 import pytest
 
 from partial_dates import PartialDate
-from tests.models import Record, Sample
+from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
+from tests.factories import SampleFactory
+from tests.models import Event, Note, Record, Sample
 
 ROOT = Path(__file__).parent.parent
 GUIDE = ROOT / "docs" / "developer" / "querying.md"
 MOVING_GUIDE = ROOT / "docs" / "developer" / "moving-from-django-partial-date.md"
 FORMS_GUIDE = GUIDE.parent / "forms.md"
+FILTERING_GUIDE = GUIDE.parent / "filtering.md"
 SHOWING_GUIDE = GUIDE.parent / "showing.md"
 FENCED_PYTHON = re.compile(r"^```python\n(.*?)^```", re.DOTALL | re.MULTILINE)
 LISTED_ROWS = re.compile(r"^for text in (\[.*?\]):$", re.DOTALL | re.MULTILINE)
@@ -157,6 +161,113 @@ class TestStatedResults:
         assert (text in found) is stated
 
 
+def listed_filtering_rows():
+    return ast.literal_eval(LISTED_ROWS.search(FILTERING_GUIDE.read_text()).group(1))
+
+
+def optional(cell):
+    return None if cell == "-" else cell
+
+
+def filtering_cases():
+    cases = []
+    for table in parse_tables(FILTERING_GUIDE.read_text()):
+        header = [unquote(cell) for cell in table[0]]
+        if "Row" not in header:
+            continue
+        for cells in table[1:]:
+            row = dict(zip(header, [unquote(cell) for cell in cells], strict=True))
+            if "After" in row:
+                data = {
+                    f"collected_{side.lower()}": optional(row[side])
+                    for side in ("After", "Before")
+                    if optional(row[side])
+                }
+                cases.append(
+                    pytest.param(
+                        PartialDateRangeFilter,
+                        {},
+                        data,
+                        row["Row"],
+                        row["Found"] == "yes",
+                        id=f"{row['After']}-{row['Before']}-{row['Row']}",
+                    )
+                )
+            elif "Lookup" in row:
+                cases.append(
+                    pytest.param(
+                        PartialDateFilter,
+                        {"lookup_expr": row["Lookup"]},
+                        {"collected": row["Entry"]},
+                        row["Row"],
+                        row["Found"] == "yes",
+                        id=f"{row['Lookup']}-{row['Entry']}-{row['Row']}",
+                    )
+                )
+            else:
+                for column in header:
+                    if row[column] in ("yes", "no"):
+                        cases.append(
+                            pytest.param(
+                                PartialDateFilter,
+                                {"lookup_expr": column},
+                                {"collected": row["Bound"]},
+                                row["Row"],
+                                row[column] == "yes",
+                                id=f"{row['Bound']}-{row['Row']}-{column}",
+                            )
+                        )
+    return cases
+
+
+class TestFilteringExamples:
+    @pytest.fixture
+    def rows(self, db):
+        return [SampleFactory(collected=text) for text in listed_filtering_rows()]
+
+    def test_every_example_on_the_page_runs_and_prints_what_it_shows(self, rows):
+        blocks = FENCED_PYTHON.findall(FILTERING_GUIDE.read_text())
+        parser = doctest.DocTestParser()
+        names = {"Sample": Sample, "Record": Record, "Note": Note}
+        test = parser.get_doctest(
+            "\n".join(blocks), names, "filtering", str(FILTERING_GUIDE), 0
+        )
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
+        report = []
+
+        results = runner.run(test, out=report.append, clear_globs=False)
+
+        assert results.attempted > 0
+        assert results.failed == 0, "".join(report)
+
+    def test_the_page_lists_a_row_holding_no_date(self):
+        assert None in listed_filtering_rows()
+
+    def test_the_page_states_results(self):
+        assert filtering_cases()
+
+    @pytest.mark.parametrize(
+        ("filter_class", "options", "data", "row", "stated"), filtering_cases()
+    )
+    def test_each_stated_result_is_what_the_filter_finds(
+        self, rows, filter_class, options, data, row, stated
+    ):
+        meta = type("Meta", (), {"model": Sample, "fields": []})
+        filters = {"collected": filter_class(field_name="collected", **options)}
+        built = type(
+            "GuideFilter", (django_filters.FilterSet,), {"Meta": meta, **filters}
+        )
+
+        applied = built(data, queryset=Sample.objects.all())
+
+        assert applied.is_valid()
+        found = [sample.collected and str(sample.collected) for sample in applied.qs]
+        text = None if row == NO_DATE else row
+        assert (text in found) is stated
+
+
 def moving_blocks():
     return [
         (match["info"].strip(), textwrap.dedent(match["code"]))
@@ -188,3 +299,26 @@ class TestMovingGuide:
         assert runnable
         for code in runnable:
             exec(compile(code, str(MOVING_GUIDE), "exec"), {})  # noqa: S102
+
+
+REST_FRAMEWORK_GUIDE = GUIDE.parent / "rest-framework.md"
+
+
+class TestRestFrameworkExamples:
+    @pytest.mark.django_db
+    def test_every_example_on_the_page_runs_and_prints_what_it_shows(self):
+        blocks = FENCED_PYTHON.findall(REST_FRAMEWORK_GUIDE.read_text())
+        parser = doctest.DocTestParser()
+        names = {"Sample": Sample, "Event": Event}
+        test = parser.get_doctest(
+            "\n".join(blocks), names, "rest-framework", str(REST_FRAMEWORK_GUIDE), 0
+        )
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
+        report = []
+
+        results = runner.run(test, out=report.append, clear_globs=False)
+
+        assert results.attempted > 0
+        assert results.failed == 0, "".join(report)
