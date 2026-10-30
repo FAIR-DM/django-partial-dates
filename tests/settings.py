@@ -3,7 +3,34 @@
 import os
 
 SECRET_KEY = "tests-only-not-a-secret"
-INSTALLED_APPS = ["django.contrib.contenttypes", "tests", "tests.moving"]
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.messages",
+    "django.contrib.sessions",
+    "tests",
+    "tests.moving",
+]
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+]
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ]
+        },
+    }
+]
+ROOT_URLCONF = "tests.urls"
 if os.environ.get("TEST_DATABASE") == "postgresql":
     DATABASES = {
         "default": {

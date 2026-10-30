@@ -1,0 +1,15 @@
+{% extends "samples/base.html" %}
+{% block content %}
+<h1>Samples</h1>
+<ul>
+  {% for sample in object_list %}
+    <li>
+      <a href="{% url 'sample-change' sample.pk %}">{{ sample }}</a>
+      (published: {{ sample.published|default_if_none:"not recorded" }},
+      catalogued: {{ sample.catalogued }})
+    </li>
+  {% empty %}
+    <li>No samples yet. Run <code>seed</code> to add some.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

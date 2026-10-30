@@ -75,7 +75,7 @@ makes the boundary tests part of the definition of done.
 
 ### R4 — Entering and editing a partial date
 
-*feature · advances G4*
+*delivered in [#19](https://github.com/FAIR-DM/django-partial-dates/issues/19) · advances G4*
 
 A person recording a date has to be able to say how much of it they know. FairDM already owns a
 form field and a three-select widget built over django-partial-date. They move here, rebuilt on

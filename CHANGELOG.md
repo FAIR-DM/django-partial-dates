@@ -32,6 +32,27 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `start` transform on `PartialDateField`, giving the first day of a date's period as a
   `datetime.date`, for a date axis. It works in `values`, `values_list`, `annotate`, `order_by`,
   grouping and comparison with real dates.
+- `partial_dates.forms.PartialDateField` and `partial_dates.forms.PartialDateWidget`, a form
+  field and a widget of year, month and day selects for entering a partial date in a plain Django
+  form. The user gives the parts they know and leaves the rest empty, and the field gives back a
+  `PartialDate` at that precision, or `None`. Every select keeps an empty choice, so a required
+  field still takes a year alone. A day without a month, or a month or day without a year, is
+  refused with the code `incomplete`, and a date that does not exist or text no select can produce
+  with `invalid`. A form opened on a stored date selects exactly the parts it records, including a
+  year the select does not list, and saving it unchanged reports no change. The selects read year,
+  month, day in every language, each has a name of its own for assistive technology, and nothing
+  needs JavaScript, a template setting or an `INSTALLED_APPS` entry.
+- `PartialDateField.formfield()` returns the form field, so a model form and the admin show the
+  year, month and day selects for a partial date field with no form or widget to declare. The
+  field's `blank`, `verbose_name`, `help_text`, default and `unique` carry over, and a validator on
+  the model field or the form field receives the `PartialDate`. With nothing said, the year select
+  lists the years from the current year down to 1900, worked out each time the form is shown, and
+  `PartialDateWidget(years=...)` names others for one field. The years offered limit nothing: a
+  stored year the list does not hold is added to it, and any year a `PartialDate` accepts is
+  accepted.
+- An `example/` project in the repository that serves a model form, a form with no model and the
+  admin on localhost, with a command that seeds sign-ins and a sample at each precision. It is not
+  part of the installed package.
 - `ConvertPartialDateField`, a migration operation that converts a column written by
   django-partial-date into a `PartialDateField` in place, on PostgreSQL and SQLite. It takes the
   arguments of Django's `AlterField`, so the only edit to the migration Django generates is the
@@ -43,7 +64,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `OldPartialDateField`, a field that existing migrations use in place of django-partial-date's,
   so they describe the same column and a project can uninstall that package.
 - A guide to moving from django-partial-date.
-- The developer guide: installation, and a querying page that states which uncertain dates each
+- The developer guide: installation, a page on entering a partial date in a form, in a model form
+  and in the admin, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a
   range, leaving every one out, and taking in the whole of a month or year. It also covers
   ordering, counting by year, month and day, a date axis, a drilldown, and where each database
