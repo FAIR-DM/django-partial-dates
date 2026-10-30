@@ -824,9 +824,7 @@ class TestListPage:
         ]
 
     def test_a_range_given_by_selects_lists_the_same_stretch(self, grid, get):
-        _response, page = get(
-            entered_by_parts(after="1990", before="1990-06", name="when")
-        )
+        page = get(entered_by_parts(after="1990", before="1990-06", name="when"))[1]
 
         assert "1990-06-14" in page.rows
         assert "1990-07" not in page.rows
@@ -888,9 +886,9 @@ class TestListPage:
         self, grid, get
     ):
         query = entered_by_parts(after="1990-05", before="1990-06-01", name="when")
-        _response, first = get(query)
+        first = get(query)[1]
 
-        _response, again = get(query)
+        again = get(query)[1]
 
         assert again.rows == first.rows
         assert again.rows != [str(sample.collected or "") for sample in grid]

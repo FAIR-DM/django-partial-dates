@@ -45,7 +45,7 @@ through an API is a second thing a developer sets out to do. A developer's and a
 never merged. Each extra's independence, the Meta.fields route and the API client's query string
 are scenarios and not stories, because nobody sets out to do them on their own.
 
-**ADR:** none. This is how the specification is divided.
+**ADR:** none — this is how the specification is divided.
 
 ## D2 — A filter reads both the selects and the ISO form
 
@@ -55,7 +55,7 @@ the point of it. But R8 pairs filters with an API, and FairDM's filters serve bo
 each would naturally use. When both arrive the ISO form is used, because a client that names it
 asked for exactly that.
 
-**ADR:** none. It is the public behaviour of the filter, and the spec records it.
+**ADR:** none — it is the public behaviour of the filter, and the spec records it.
 
 ## D3 — The range's upper bound takes in the whole of its period
 
@@ -88,7 +88,7 @@ already cover both with `Q` objects, django-filter's `method` is the place for t
 rule would have to be documented, tested and maintained for a need nobody has shown. Article II
 settles it.
 
-**ADR:** none.
+**ADR:** none — it follows the rule every lookup already has, and ADR 0003 records it.
 
 ## D5 — A range's parameters are `_after` and `_before`
 
@@ -96,7 +96,7 @@ They are django-filter's names for `DateFromToRangeFilter`, so a developer knows
 FairDM's `date_after` and `date_before` already use them. A FairDM filter declared as `date` keeps
 the parameters its users have.
 
-**ADR:** none.
+**ADR:** none — a naming choice taken from django-filter.
 
 ## D6 — Year, month and day stay on `PartialDateFilter`
 
@@ -106,7 +106,7 @@ class for parts. Its value is a whole number and never a partial date. `1990.5` 
 which gives the same rows for a whole number, and that is left alone rather than overriding the
 mapping of every integer. It is a behaviour of a dependency on every integer field in a project.
 
-**ADR:** none.
+**ADR:** none — how one class is shaped, sealed inside the filter module.
 
 ## D7 — Filtering by precision gets no filter of its own
 
@@ -114,7 +114,7 @@ mapping of every integer. It is a behaviour of a dependency on every integer fie
 same. Asking for dates recorded only to the year is `month__isnull`, reached with `isnull` in
 `Meta.fields` or django-filter's `BooleanFilter`, and the guide says so.
 
-**ADR:** none.
+**ADR:** none — nothing was built, so nothing inherits it.
 
 ## D8 — The serializer refuses an empty string in JSON
 
@@ -123,7 +123,7 @@ or `null`, and Django REST framework's `DateField` refuses `""` the same way. Ac
 gives a required date its database error. HTML form input is different: Django REST framework itself
 turns an empty entry into `None` on a field that allows it.
 
-**ADR:** none.
+**ADR:** none — local to one field, and the guide states it.
 
 ## D9 — `ModelSerializer` is left alone
 
@@ -132,28 +132,28 @@ framework, and changing a global mapping from the extra would depend on import o
 declares the field, or names it in its own mapping, and the guide shows both. Nothing needs to
 happen for a nullable date, because the fallback writes the same ISO form.
 
-**ADR:** none.
+**ADR:** none — nothing was built, so nothing inherits it.
 
 ## D10 — The extras are named after the packages they install
 
 `django-filter` and `djangorestframework`, so the install line reads for itself and there is no
 vocabulary to learn. There is no combined extra: a project asks for both by naming both.
 
-**ADR:** none.
+**ADR:** none — a packaging name a later release can add to.
 
 ## D11 — No sketch
 
 The feature adds no page. A filter shows the selects FS-004 already built, and the example project
 uses them on a list that exists. Everything can be tested.
 
-**ADR:** none.
+**ADR:** none — it applies to this feature alone.
 
 ## D12 — Nothing added for API schemas
 
 Generated schemas see the field as text. FairDM has its own schema code and no need for this package
 to integrate with a generator. Adding one would be a third optional dependency.
 
-**ADR:** none.
+**ADR:** none — nothing was built, so nothing inherits it.
 
 ## D13 — The first task was done directly
 
