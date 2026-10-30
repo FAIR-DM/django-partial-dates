@@ -37,7 +37,7 @@ are run by a test.
 | X Cohesion | One class per lookup, the way Django shapes them |
 | XI Storage | Nothing stored changes. `start` is derived when a query runs |
 | XII Filters | Every filter has a result stated in the guide, and the boundary tests cover a value at each precision on both sides of each bound. Every lookup runs in the database on both supported databases |
-| XIII Compatibility | Run on Django 5.2, 6.0 and 6.1 and on both databases before review |
+| XIII Compatibility | The suite runs on Django 5.2, 6.0 and 6.1 on SQLite, and on both databases on 6.1, once the stories are done |
 
 No violations.
 
@@ -95,13 +95,13 @@ the field provides itself, and `tests/test_guide.py` reads the guide.
 | `TestBounds` | `test_fields.py` | US-1 9–14, parametrised over the two expected-results tables |
 | `TestRangeIndex` | `test_fields.py` | US-1 15 for a range, FR-008 |
 | `TestOrdering` | `test_fields.py` | US-2 1, 2, 12 and SC-004 |
-| `TestQueryCount` | `test_lookups.py` | SC-005: one query for a filter, a grouping and an ordering, with one row and with several |
+| `TestQueryCount` | `test_lookups.py`, `test_fields.py` | SC-005: one query for a filter, a grouping and an ordering, with one row and with several, each in the file of the module that provides it |
 | `TestExamples` | `test_guide.py` | FR-017, SC-006: every `>>>` example in the guide runs and prints what it shows |
 | `TestStatedResults` | `test_guide.py` | US-1 16, SC-002: each cell of the guide's result tables is what the filter returns |
 
 Plan tests read `QuerySet.explain()`. A shared helper in `tests/conftest.py`, a fixture
-`query_plan(queryset)`, returns the plan text and, on PostgreSQL, sets `SET LOCAL enable_seqscan =
-off` first, so a small table cannot hide a missing index. The assertion is that the plan names an
+`query_plan(queryset)`, returns the plan text and, on PostgreSQL only, sets `SET LOCAL
+enable_seqscan = off` first, inside the transaction the `db` fixture holds, so a small table cannot hide a missing index. The assertion is that the plan names an
 index, and each test also asserts that the same filter without the index path does not, by
 checking `month=6`, which reads the table.
 
@@ -128,7 +128,8 @@ and `start` from the database equal the attributes of the value read in Python.
 - `README.md`: *Status* updated, and a short *Querying* section linking to the guide by absolute
   URL.
 - `CHANGELOG.md`: `[Unreleased]` → *Added*.
-- `docs/ROADMAP.md`: R3's status line, as R1 and R2 read, at ready for review.
+- `docs/ROADMAP.md`: R3's status line reads `delivered in` the issue link, as R1 and R2 do, written
+  with the last commit before the pull request is marked ready.
 
 Each story writes its own part of `querying.md`: US-1 the page and everything about filters, US-2
 ordering, grouping and `start`. The docs step passes at each story's exit because the page exists

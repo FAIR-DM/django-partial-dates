@@ -51,8 +51,9 @@ then the same with `TEST_DATABASE=postgresql` and the `PG*` variables set.
   found; class `TestStatedResults` reads each result table and asserts each cell against the filter
   it names (SC-002). `tests/test_guide.py` joins `non-mirror-paths` in `pyproject.toml`. `README.md`
   *Status* and a *Querying* section, `CHANGELOG.md` *Added*
-- [ ] T006 [US1] `TestQueryCount` in `tests/test_lookups.py`: a `year` filter, a `month` filter and a
-  range each run one query with one row and with several (SC-005). Then the whole suite with
+- [ ] T006 [US1] `TestQueryCount` in `tests/test_lookups.py`: a `year` filter and a `month` filter,
+  and in `tests/test_fields.py` a range, each run one query with one row and with several (SC-005).
+  Then the whole suite with
   `TEST_DATABASE=postgresql` and the `PG*` variables set (US-1 19)
 
 **Checkpoint**: a developer can filter by part and by range, on both databases, and the guide says
@@ -88,8 +89,11 @@ what each filter includes.
 - [ ] T010 [US2] The rest of `docs/developer/querying.md`: what ordering, grouping and `start` do at
   each precision, where each database sorts an empty row and how to say which, and the recipes for
   a date axis and a drilldown, with its closing explanation sections (FR-016, US-2 13, 14). Every
-  example runs under `TestExamples` on both databases. `README.md` *Querying* and `CHANGELOG.md` extended
-- [ ] T011 [US2] Add ordering and grouping to `TestQueryCount` (SC-005). Then the whole suite with
+  example runs under `TestExamples` on both databases, so every ordering that meets an empty value
+  names `nulls_first` or `nulls_last`. The guide states the same rule for a date with the part
+  unknown as for an empty row. `README.md` *Querying* and `CHANGELOG.md` extended
+- [ ] T011 [US2] Add grouping to `TestQueryCount` in `tests/test_lookups.py`, and ordering to the
+  same class in `tests/test_fields.py` (SC-005). Then the whole suite with
   `TEST_DATABASE=postgresql` and the `PG*` variables set (US-2 15)
 
 **Checkpoint**: both stories work on both databases, and the guide is complete.

@@ -187,8 +187,9 @@ thing a site does with stored dates, and they need the same honesty about dates 
     its own precision.
 15. **Given** any of the scenarios above, **When** the suite runs against PostgreSQL and against
     SQLite, **Then** each gives the same result on both, with one exception: an ordering that names
-    neither `nulls_first` nor `nulls_last` leaves rows holding no date where each database puts
-    them, and the guide states where that is.
+    neither `nulls_first` nor `nulls_last` leaves rows whose ordering value is empty, a row holding
+    no date or a date with that part unknown, where each database puts them, and the guide states
+    where that is.
 
 ---
 
@@ -218,9 +219,11 @@ thing a site does with stored dates, and they need the same honesty about dates 
   the row is in neither `filter(month=6)` nor `exclude(month=6)`. Saying that a year-only date is
   not in June would claim something nobody recorded. A developer who wants those rows asks for them
   with `month__isnull=True`.
-- Q: Where do rows holding no date sort? → A: Where each database puts nulls, as for every Django
-  field, because the package cannot change it for a plain `order_by`. PostgreSQL and SQLite differ.
-  `nulls_first` and `nulls_last` give one answer on both, and the guide says to use them.
+- Q: Where do rows with an empty ordering value sort? → A: Where each database puts nulls, as for
+  every Django field, because the package cannot change it for a plain `order_by`. That covers a
+  row holding no date, and a date with the part unknown when ordering by `month` or `day`.
+  PostgreSQL and SQLite differ. `nulls_first` and `nulls_last` give one answer on both, and the
+  guide says to use them.
 - Q: Does a filter accept a real date as a bound? → A: No. A real date is refused by the field, as
   FS-002 set out, because it carries a day that may never have been recorded. A real date is
   compared through `start`, where the rule is stated: the first day of the period.
@@ -264,8 +267,8 @@ thing a site does with stored dates, and they need the same honesty about dates 
   takes a real date with `exact`, `gt`, `gte`, `lt`, `lte` and `range`.
 - **FR-012** (US2): Ordering by the field on an indexed column MUST use the index on both databases.
 - **FR-013** (US1, US2): Every lookup, filter and transform in this specification MUST run in the
-  database, and MUST give the same result on PostgreSQL and on SQLite, apart from where rows
-  holding no date sort when an ordering does not say.
+  database, and MUST give the same result on PostgreSQL and on SQLite, apart from where rows whose
+  ordering value is empty sort when an ordering does not say.
 - **FR-014** (US1): A developer guide MUST state, for every filter in this specification, which
   uncertain matches it includes, for a value at each precision on both sides of a bound. It MUST
   say what `exclude` does with an unknown part and with a row holding no date, and which of
@@ -274,8 +277,8 @@ thing a site does with stored dates, and they need the same honesty about dates 
   to a range, leaving every uncertain date out of a range, and taking in the whole of the month or
   year named by an upper bound.
 - **FR-016** (US2): The guide MUST state what ordering, grouping and `start` do with dates at each
-  precision, where each database sorts a row holding no date, and how to say which, and MUST
-  include recipes for a date axis and for a year, month and day drilldown.
+  precision, where each database sorts a row whose ordering value is empty, and how to say which,
+  and MUST include recipes for a date axis and for a year, month and day drilldown.
 - **FR-017** (US1, US2): Every example in the guide MUST run against the package and give the result
   the guide states.
 

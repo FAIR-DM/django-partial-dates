@@ -133,3 +133,59 @@ definition, because its period sits wholly inside the bound's. It is a date insi
 and the expected-results table and the guide state its result directly.
 
 **ADR:** none — vocabulary unchanged.
+
+## D13 — Lookups live in their own module, and the field registers them
+
+`partial_dates/lookups.py` holds the classes and imports nothing from `fields.py`, which registers
+them after the class, so importing the field brings its lookups (research R5).
+
+**ADR:** none — local to the package's layout.
+
+## D14 — A one-year filter compares the column with two bounds
+
+`year=1990` becomes `BETWEEN '1990' AND '1990-99'`, written on `Lookup.as_sql` and not by
+subclassing Django's undocumented `YearLookup` (research R3).
+
+**ADR:** none — an implementation choice inside one class, which ADR 0001's measurements already
+assume.
+
+## D15 — A `Sample` test model for the guide
+
+The guide's examples use `Sample.collected`, the README's model, so they read as a real project
+would. It costs one test model, migration and factory, and it is not shipped.
+
+**ADR:** none — test support.
+
+## D16 — The package's first guide takes the documented layout
+
+`documentation.md` requires a homepage, a guide index and an installation page once a package has
+a `docs/` guide, so those three arrive with the querying page. They have no requirement of their
+own in the specification.
+
+**ADR:** none — follows the repository's documentation standard.
+
+## D17 — The guide's examples and result tables are run by a test
+
+`tests/test_guide.py` runs every `>>>` example in the page's fenced blocks and compares each cell of
+its result tables with the filter it names, so the page cannot drift from the code (research R6).
+
+**ADR:** none — a test.
+
+## D18 — One dispatch group per story
+
+US-1 has six tasks and US-2 five, each on one concern.
+
+**ADR:** none — how the build is divided.
+
+## D19 — Design review outcome
+
+- DR SPEC-001 (medium): ordering by `month` or `day` also leaves dates with that part unknown where
+  each database puts nulls, and the specification named only rows holding no date. FR-013, FR-016,
+  US-2 scenario 15 and the clarification now say rows whose ordering value is empty. No behaviour
+  changes. T010 states it in the guide.
+- DR ARCH-001 (low): `Sample` is not needed by the index tests. Kept for the guide (D15).
+- Notes taken: `TestQueryCount` splits along the mirror rule, the `ROADMAP` wording is settled, the
+  Django versions in the constitution check are stated, and the fixture's PostgreSQL setting is
+  scoped.
+
+**ADR:** none — corrections to this feature's plan.

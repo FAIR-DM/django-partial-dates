@@ -130,5 +130,7 @@ year, month and day transforms           · 7, new    · searched fields.py, Ext
 one-year filter on the index             · 7, new    · searched YearLookup, undocumented, date bounds
 start transform                          · 7, new    · searched Cast, Concat, TruncDate (need a date)
 guide page and test                      · 7, new    · searched docs/, no guide exists
+homepage, guide index, installation page · 7, new    · documentation.md 3, 4; searched docs/
+query_plan test fixture                  · 7, new    · searched conftest.py, explain() needs seqscan off
 Sample test model and factory            · 7, new    · searched tests/models.py, field names read badly
 ```
