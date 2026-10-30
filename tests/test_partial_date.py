@@ -7,9 +7,10 @@ import operator
 
 import pytest
 from django.conf import settings
+from django.template import engines
 from django.test import override_settings
 from django.utils import translation
-from django.utils.formats import date_format, number_format
+from django.utils.formats import date_format, number_format, reset_format_cache
 
 from partial_dates import PartialDate, Precision, Relation
 
@@ -495,6 +496,34 @@ class TestDisplayForm:
     def test_a_language_without_formats_reads_as_django_writes_it(self, value, name):
         with translation.override("xx"):
             assert value.display_form() == date_format(value.start, name)
+
+    @pytest.mark.parametrize(
+        "value", [PartialDate(1990), PartialDate(1990, 6), PartialDate(1990, 6, 14)]
+    )
+    @pytest.mark.parametrize("language", ["en", "de", "ja"])
+    def test_it_equals_what_the_filter_renders_with_no_request(self, language, value):
+        template = engines["django"].from_string(
+            "{% load partial_dates %}{{ value|partial_date }}"
+        )
+
+        with translation.override(language):
+            rendered = template.render({"value": value})
+
+            assert value.display_form() == rendered
+
+    @pytest.fixture
+    def project_formats(self):
+        reset_format_cache()
+        with override_settings(FORMAT_MODULE_PATH=["tests.formats"]):
+            yield
+        reset_format_cache()
+
+    def test_a_project_format_module_sets_the_month_and_the_day_format(
+        self, project_formats
+    ):
+        with translation.override("en"):
+            assert PartialDate(1990, 6).display_form() == "1990/06"
+            assert PartialDate(1990, 6, 14).display_form() == "<14>/06/1990"
 
 
 class TestDisplayFormNamesOnlyRecordedParts:
