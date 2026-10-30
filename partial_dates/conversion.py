@@ -103,6 +103,39 @@ class ConvertPartialDateField(migrations.AlterField):
     a generated migration is the operation's name.
     """
 
+    def describe(self) -> str:
+        """Describe the operation for `sqlmigrate` and the migration's summary.
+
+        Returns:
+            A sentence naming the field and the conversion.
+        """
+        return (
+            f"Convert field {self.name} on {self.model_name} from django-partial-date"
+        )
+
+    @property
+    def migration_name_fragment(self) -> str:
+        """Name the part of a generated migration's file this operation adds.
+
+        Returns:
+            The fragment, made of the model's and the field's names.
+        """
+        return f"convert_{self.model_name_lower}_{self.name_lower}"
+
+    def reduce(
+        self, operation: migrations.operations.base.Operation, app_label: str
+    ) -> bool:
+        """Stop the optimiser folding a later operation into the conversion.
+
+        Args:
+            operation: The operation after this one.
+            app_label: The label of the app the migration belongs to.
+
+        Returns:
+            `False`, so a squashed migration keeps the conversion.
+        """
+        return False
+
     def database_forwards(
         self,
         app_label: str,

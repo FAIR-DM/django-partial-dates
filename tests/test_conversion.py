@@ -2,9 +2,17 @@ import os
 from datetime import datetime
 
 import pytest
-from django.db import DatabaseError, IntegrityError, connection, models
+from django.db import (
+    DatabaseError,
+    IntegrityError,
+    NotSupportedError,
+    connection,
+    migrations,
+    models,
+)
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.graph import MigrationGraph
+from django.db.migrations.optimizer import MigrationOptimizer
 
 from partial_dates import PartialDate, PartialDateField
 from partial_dates.conversion import (
@@ -568,3 +576,83 @@ class TestBackwards:
         )
 
         assert describe_column(old, "seen") == describe_column(new, "seen")
+
+
+@pytest.mark.django_db(transaction=True)
+class TestMigrationTooling:
+    @pytest.fixture
+    def old_table(self, build_state, create_tables, insert_rows):
+        state = build_state("tool_rows", {"seen": OldPartialDateField(null=True)})
+        create_tables(state)
+        insert_rows("tool_rows", "seen", ["1990-01-01 00:00:00", "1990-06-14 13:45:37"])
+        return state
+
+    @pytest.mark.parametrize("direction", ["forwards", "backwards"])
+    def test_unsupported_vendor_is_refused_with_nothing_changed(
+        self,
+        direction,
+        old_table,
+        monkeypatch,
+        read_column,
+        describe_column,
+        apply_forwards,
+        apply_backwards,
+    ):
+        operation = ConvertPartialDateField(
+            "thing", "seen", PartialDateField(null=True)
+        )
+        rows, column = (
+            read_column("tool_rows", "seen"),
+            describe_column("tool_rows", "seen"),
+        )
+        target = old_table.clone()
+        operation.state_forwards("conv", target)
+        with monkeypatch.context() as patch:
+            patch.setattr(connection, "vendor", "mysql")
+            with pytest.raises(NotSupportedError):
+                if direction == "forwards":
+                    apply_forwards(operation, old_table)
+                else:
+                    apply_backwards(operation, old_table, target)
+
+        assert read_column("tool_rows", "seen") == rows
+        assert describe_column("tool_rows", "seen") == column
+
+    def test_a_conversion_followed_by_an_alteration_keeps_both(self):
+        operations = [
+            ConvertPartialDateField("thing", "seen", PartialDateField(null=True)),
+            migrations.AlterField(
+                "thing", "seen", PartialDateField(null=True, help_text="When seen.")
+            ),
+        ]
+
+        optimized = MigrationOptimizer().optimize(operations, "conv")
+
+        assert [type(operation) for operation in optimized] == [
+            ConvertPartialDateField,
+            migrations.AlterField,
+        ]
+
+    def test_collecting_sql_reads_no_rows_and_refuses_nothing(
+        self, old_table, read_column
+    ):
+        operation = ConvertPartialDateField(
+            "thing", "seen", PartialDateField(null=True)
+        )
+        rows = read_column("tool_rows", "seen")
+        target = old_table.clone()
+        operation.state_forwards("conv", target)
+
+        with connection.schema_editor(collect_sql=True) as editor:
+            operation.database_forwards("conv", editor, old_table, target)
+
+        assert editor.collected_sql
+        assert read_column("tool_rows", "seen") == rows
+
+    def test_the_operation_is_named_for_the_conversion(self):
+        field = PartialDateField(null=True)
+        operation = ConvertPartialDateField("thing", "seen", field)
+        alteration = migrations.AlterField("thing", "seen", field)
+
+        assert operation.describe() != alteration.describe()
+        assert operation.migration_name_fragment == "convert_thing_seen"
