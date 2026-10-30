@@ -27,8 +27,10 @@ layout or appearance. No name starts with an underscore. Line length is 88.
 - [ ] T002 [US1] Tests in `tests/test_forms.py`, `TestRefusing`: a day with no month and a part with no
   year give `incomplete` (US-1 11, 12); 30 February, `1900-02-29` and month `13` give `invalid`, and
   `2000-02-29` is accepted (US-1 13); text, year `0`, and a 5,000-digit year give `invalid`, with no
-  exception (US-1 16); a refused entry re-renders with each submitted part selected, the error on the
-  field and nothing in `cleaned_data` for it (US-1 14). `TestEveryCombination`, parametrised over
+  exception (US-1 16), and month `0` with a day gives `invalid`; a refused entry re-renders with each
+  submitted part selected, the error on the field and nothing in `cleaned_data` for it (US-1 14), and
+  no year appears twice in the select, and a posted `0` or text is not offered as a choice (FR-003,
+  FR-004). `TestEveryCombination`, parametrised over
   empty, valid and impossible values of each part: each entry is either the value with exactly those
   parts or an error with a code (SC-002)
 - [ ] T003 [US1] Tests in `tests/test_forms.py`, `TestAcrossLanguages`: under `translation.override`
@@ -57,15 +59,18 @@ the same on PostgreSQL.
   `TestFormField`, using a `ModelForm` on `Record` and `Event`: nothing declared gives the three selects
   and saving stores the value at each precision, and editing a row moves it between precisions and
   saves unchanged without a change (US-2 1, SC-001, SC-003); `blank`, `verbose_name` and `help_text`
-  carry over (US-2 4); a default as a value, as ISO text and as a callable is selected on a new row and
-  stored unchanged (US-2 5); a duplicate on `Event.occurred` gives `unique` on the field (US-2 6); a
+  carry over (US-2 4); a default as a value (`Note.drafted`), as ISO text (`Record.defaulted`) and as a
+  callable (`Note.reviewed`) is selected on a new row and stored unchanged, with the callable's posted
+  `initial-reviewed` leaving `changed_data` without it (US-2 5, FR-008); a duplicate on `Event.occurred` gives `unique` on the field (US-2 6); a
   validator on the model field and on the form field receives a `PartialDate`, and its error is on the
   field (US-2 7)
-- [ ] T006 [US2] `tests/settings.py`, `tests/admin.py`, `tests/urls.py`, `Note` and its migration, and
-  `pyproject.toml`, as `plan.md` describes. Tests in `tests/test_admin.py`: a staff user adds and changes
+- [ ] T006 [US2] `tests/settings.py`, `tests/admin.py`, `tests/urls.py`, `Note` with its factory,
+  fixture, factory test and migration, and `pyproject.toml`, as `plan.md` describes. `makemigrations
+  --check` stays clean. Tests in `tests/test_admin.py`: a staff user adds and changes
   a `Record` with the admin client, year only and full, with a `Note` inline, and the rows hold those
   values; an unchanged save records that nothing changed; a day with no month redisplays with the error
-  on the field and saves nothing; text in a part gives an error page, not a server error (US-2 2, SC-004)
+  on the field and saves nothing; text in a part returns the change form, status 200, with the `invalid` error on the
+  field (US-2 2, SC-004)
 - [ ] T007 [US2] Tests in `tests/test_forms.py`: `TestDeclaring`, a form with no model cleans to a value
   or `None` (US-2 3). `TestOfferedYears`, the default runs from today's year to 1900, newest first
   (US-2 8), `years` changes one field and not another (US-2 9), a year outside `years` is still accepted
@@ -73,12 +78,14 @@ the same on PostgreSQL.
   two fields on a form, a prefix and a formset (US-2 12). `TestNothingConfigured`, a fresh interpreter
   with `settings.configure` naming no apps and no templates renders and cleans the form (US-2 11, FR-018).
   Edge cases: `990` records `0990`, a stored `0990` opens selected, a part left out of the submission
-  reads as empty
+  reads as empty. A `years` generator still lists its years on a second render. A hand-edited
+  `initial-<name>` on an extra formset form raises nothing (SC-002)
 - [ ] T008 [US2] `example/`, `.gitignore` and `pyproject.toml`, as `plan.md` describes. Check by hand:
   `migrate`, `seed` run twice, then `runserver`, with each page answering. `uv build` leaves `example/`
   out of the wheel and the sdist
 - [ ] T009 [US2] `docs/developer/forms.md`, second half: model forms, the admin, naming the years, a
-  limit as a validator, translating the messages, running the example. `README.md` scope, the R4 line in
-  `docs/ROADMAP.md`, `CHANGELOG.md`, and the assumption in `specs/002-model-field/spec.md` (D13)
+  limit as a validator, translating the messages, running the example on localhost, with its seeded
+  sign-ins stated to be for local use. `README.md` scope, the R4 line in
+  `docs/ROADMAP.md`, worded `delivered in [#19](...)` as R1 to R3 are, `CHANGELOG.md`, and the assumption in `specs/002-model-field/spec.md` (D13)
 
 **Checkpoint**: every scenario passes on both databases.

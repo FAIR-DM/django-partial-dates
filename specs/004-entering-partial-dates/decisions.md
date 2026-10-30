@@ -120,8 +120,8 @@ repository gains an `example/` directory:
   defaulted partial date field, an inline, an admin registration and one page with a plain form.
 - A seed command that creates the staff and regular sign-ins and a row at each precision, including
   a year outside the default list.
-- Run with `uv run python example/manage.py runserver 0.0.0.0:8033`. Port 8033 is the one this
-  project keeps for it.
+- Run with `uv run python example/manage.py runserver 8033`, on localhost. Port 8033 is the one
+  this project keeps for it. The seeded sign-ins are for local use, and the guide says so.
 - Outside the wheel and the sdist, which already list what they include. Excluded from deptry, and
   its database file is ignored by git.
 
@@ -186,3 +186,24 @@ existing test model has a relation. `django.contrib.admin` and what it needs joi
 and `example/` only.
 
 **ADR:** none — test scaffolding.
+
+## D19 — Design review outcome
+
+No blocking finding.
+
+- SPEC-001 (medium): a refused entry holds posted text, so the year comparison would list a year
+  twice and offer `0` or text as a choice. `get_context` now reads the year as a whole number in 1
+  to 9999, and T002 tests it.
+- SPEC-002 (medium): the test app had no value default and no callable default. `Note` carries both,
+  and T005 posts the hidden initial.
+- SEC-001 (low): `decompress` gives three `None`s for text that is not an ISO form, so a hand-edited
+  hidden initial raises nothing. T007 tests it.
+- ARCH-001 (low): `Note` has a factory, a fixture, a factory test, `verbose_name` and `help_text`.
+- SEC-002 (low): the guide runs the example on localhost, and D11 says the sign-ins are for local
+  use. The project's own review server binds wider, which is its concern and not the guide's.
+- SPEC-003 (low), declined: the example project stays as D11 sets out. The model form pages are how
+  the required, optional and defaulted states are reached outside the admin.
+- Notes taken: `is None` in `compress`, `years` kept as a tuple, 6.0 run locally, the `delivered in`
+  wording for the roadmap.
+
+**ADR:** none — corrections to this feature's plan.

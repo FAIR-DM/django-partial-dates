@@ -37,7 +37,7 @@ page documents both.
 | X Cohesion | Two classes, as Django shapes a field and a widget |
 | XI Storage | Untouched |
 | XII Filters | No filter added |
-| XIII Compatibility | The suite runs on Django 5.2, 6.0 and 6.1 on SQLite, and on PostgreSQL |
+| XIII Compatibility | Once the stories are done, the suite runs locally on Django 5.2, 6.0 and 6.1 on SQLite, and on 6.1 on PostgreSQL |
 
 No violations.
 
@@ -62,16 +62,20 @@ class PartialDateField(forms.MultiValueField):
 
 - `PartialDateWidget.__init__` builds `{"year": Select, "month": Select, "day": Select}`. Each select
   has an `aria-label` naming its part, and an empty choice labelled the same. Months come from
-  `MONTHS`, days are 1 to 31. `years` is kept on the instance.
+  `MONTHS`, days are 1 to 31. `years` is kept on the instance as a tuple, or `None`.
 - `decompress` takes `None`, `""`, a `PartialDate` or an ISO form and returns `[year, month, day]`,
-  with `None` for an unknown part.
+  with `None` for an unknown part. Text that is not an ISO form gives three `None`s, because a posted
+  hidden initial reaches it, and a hand-edited one must not raise.
 - `get_context` decomposes the value when it is not already a list, works out the year list from
-  `self.years`, or from today's year down to 1900, adds the value's year when it is not among them,
-  sets `self.widgets[0].choices`, then calls `super()`.
+  `self.years`, or from today's year down to 1900, and reads the value's year as a whole number,
+  because a refused entry holds posted text. It adds that year when it lies in 1 to 9999 and is not
+  among them, so nothing is listed twice and a year no date can have is never offered. It then sets
+  `self.widgets[0].choices` and calls `super()`.
 - `PartialDateField.__init__` passes three `forms.IntegerField(required=False)` and
   `require_all_fields=False` to `super()`.
-- `compress` returns `None` for an empty list. It raises `ValidationError(code="incomplete")` for no
-  year, or a day with no month. It returns `PartialDate(year, month, day)`, turning `ValueError` into
+- `compress` returns `None` for an empty list. It raises `ValidationError(code="incomplete")` when
+  the year `is None`, or the month `is None` and the day is not, so that year `0` reaches `PartialDate`
+  and gives `invalid`. It returns `PartialDate(year, month, day)`, turning `ValueError` into
   `ValidationError(code="invalid")`.
 
 The module uses Django's naming, `partial_dates.forms.PartialDateField` beside
@@ -89,8 +93,11 @@ def formfield(self, **kwargs):
 
 - `tests/settings.py` gains `django.contrib.admin`, `auth`, `sessions`, `messages`, `MIDDLEWARE`,
   `TEMPLATES` and `ROOT_URLCONF = "tests.urls"`. `partial_dates` stays out of `INSTALLED_APPS`.
-- `tests/models.py` gains `Note`, with a foreign key to `Record` and an optional `written` date, for
-  the inline. `tests/migrations/0003_note.py` is made with `makemigrations tests`.
+- `tests/models.py` gains `Note`, with a foreign key to `Record`, an optional `written` date for the
+  inline, `drafted` defaulting to `PartialDate(1990, 6)` and `reviewed` defaulting to a callable, each
+  with `verbose_name` and `help_text`. `NoteFactory`, a `note` fixture and a class in
+  `tests/test_factories.py` go with it. `tests/migrations/0003_note.py` is made with
+  `makemigrations tests`.
 - `tests/admin.py` registers `Record` with a `Note` inline, and `Event`. `tests/urls.py` serves the
   admin.
 - `tests/test_forms.py` mirrors the new module. `tests/test_admin.py`, `tests/admin.py` and
@@ -117,7 +124,8 @@ ruff per-file ignore for its placeholder secret and seeded passwords.
 
 - `docs/developer/forms.md`, new: use the field in a model form and the admin, declare it on a plain
   form, name the years, add a limit with a validator, what each error code means, and how to
-  translate the messages. Its `>>>` examples run in `tests/test_guide.py`.
+  translate the messages. The example project is shown running on localhost, and its seeded sign-ins
+  are stated to be for local use. Its `>>>` examples run in `tests/test_guide.py`.
 - `docs/developer/index.md`, `docs/index.md`, `README.md` (status, usage, scope), `CHANGELOG.md`,
   and R4's line in `docs/ROADMAP.md`.
 - `specs/002-model-field/spec.md`: the assumption about a form showing plain text is rewritten to

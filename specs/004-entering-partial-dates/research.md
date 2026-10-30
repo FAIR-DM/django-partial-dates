@@ -1,7 +1,7 @@
 # Research — FS-004: Entering and editing a partial date
 
-Read against Django 6.1 as installed here, and checked against the supported range by running the
-suite on 5.2, 6.0 and 6.1 at the end of the build. A trial form built on the design below was run
+Read against Django 6.1 as installed here, and against 5.2. The suite runs on 5.2, 6.0 and 6.1 at
+the end of the build. A trial form built on the design below was run
 before planning, and every outcome stated here came from it or from Django's source.
 
 ## R1 — The widget is a `MultiWidget`, not a `SelectDateWidget`
@@ -30,8 +30,9 @@ subfields does the reading:
 
 - All parts empty gives `required`, or `None` on an optional field.
 - A part that is not a whole number gives `invalid`, from `IntegerField`.
-- `has_changed` compares part by part through `decompress`, so a stored value, a default as text
-  and the hidden initial of a callable default all compare correctly (FR-008).
+- `has_changed` compares part by part through `decompress`. A stored value, a default as text and
+  the hidden initial of a callable default all compare correctly, because `decompress` reads ISO
+  text (FR-008).
 - `BoundField.build_widget_attrs` puts no `required` attribute on a select whose subfield is
   optional, so a browser does not demand a month.
 
