@@ -79,7 +79,7 @@ The roadmap names `start` alone, and Article II asks for the least that satisfie
 the bound's enclosing periods (`1990` for `1990-06`, and `1990` and `1990-06` for `1990-06-14`), so
 adding them to a range or taking them out of it needs only `in` on those values.
 
-**ADR:** none — scope.
+**ADR:** none — what this feature leaves out, which nothing downstream depends on.
 
 ## D7 — Recipes beyond the three the issue names
 
@@ -104,7 +104,7 @@ equality carry no index promise.
 are not this package's filters, so Article XII does not reach them, and removing them would be
 machinery with no benefit. The guide says it does not cover them.
 
-**ADR:** none — scope.
+**ADR:** none — Django's lookups are left as they are, so no decision of ours stands behind them.
 
 ## D10 — Traps for planning
 
@@ -169,7 +169,7 @@ own in the specification.
 `tests/test_guide.py` runs every `>>>` example in the page's fenced blocks and compares each cell of
 its result tables with the filter it names, so the page cannot drift from the code (research R6).
 
-**ADR:** none — a test.
+**ADR:** none — how this feature's guide is tested, local to one test module.
 
 ## D18 — One dispatch group per story
 
