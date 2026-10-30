@@ -1,6 +1,7 @@
 import datetime
 import io
 import json
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
@@ -11,10 +12,12 @@ from django.core.serializers.base import DeserializationError
 from django.db import DataError, IntegrityError, connection, transaction
 from django.db.migrations.writer import MigrationWriter
 from django.db.models import F
+from django.forms import modelform_factory
 
 from partial_dates import PartialDate, PartialDateField
-from tests.factories import RecordFactory, SampleFactory
-from tests.models import Event, Record, Sample
+from partial_dates.forms import PartialDateField as PartialDateFormField
+from tests.factories import EventFactory, RecordFactory, SampleFactory
+from tests.models import Event, Note, Record, Sample
 
 
 @pytest.mark.django_db
@@ -675,3 +678,254 @@ class TestQueryCount:
 
         with django_assert_num_queries(1):
             list(Sample.objects.order_by("collected"))
+
+
+def post(name, year="", month="", day=""):
+    return {f"{name}_year": year, f"{name}_month": month, f"{name}_day": day}
+
+
+class Selects(HTMLParser):
+    """The selects in a rendered field, each with the value it has selected."""
+
+    def __init__(self, source):
+        super().__init__()
+        self.selected = {}
+        self.name = None
+        self.feed(source)
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "select":
+            self.name = attrs["name"]
+            self.selected[self.name] = ""
+        elif tag == "option" and "selected" in attrs:
+            self.selected[self.name] = attrs["value"]
+
+
+def part_names(form, name):
+    return list(Selects(str(form[name])).selected)
+
+
+def selected_parts(form, name):
+    return list(Selects(str(form[name])).selected.values())
+
+
+@pytest.mark.django_db
+class TestFormField:
+    @pytest.fixture
+    def record_form(self):
+        return modelform_factory(Record, fields=["date", "other"])
+
+    @pytest.fixture
+    def note_form(self):
+        return modelform_factory(Note, fields=["drafted", "reviewed"])
+
+    def test_a_model_form_shows_the_three_selects_with_nothing_declared(
+        self, record_form
+    ):
+        form = record_form()
+
+        assert isinstance(form.fields["date"], PartialDateFormField)
+        assert part_names(form, "date") == ["date_year", "date_month", "date_day"]
+
+    @pytest.mark.parametrize(
+        ("entry", "expected"),
+        [
+            (post("date", "1990"), PartialDate(1990)),
+            (post("date", "1990", "6"), PartialDate(1990, 6)),
+            (post("date", "1990", "6", "14"), PartialDate(1990, 6, 14)),
+        ],
+    )
+    def test_saving_stores_the_value_at_the_precision_entered(
+        self, record_form, entry, expected
+    ):
+        form = record_form(entry)
+
+        assert form.is_valid()
+        saved = form.save()
+        saved.refresh_from_db()
+        assert saved.date == expected
+
+    def test_a_form_for_a_model_with_a_required_date_saves_it(self):
+        form = modelform_factory(Event, fields=["occurred"])(post("occurred", "1850"))
+
+        assert form.is_valid()
+        assert form.save().occurred == PartialDate(1850)
+
+    @pytest.mark.parametrize(
+        ("stored", "entry", "expected"),
+        [
+            ("1990", post("date", "1990", "6"), PartialDate(1990, 6)),
+            ("1990", post("date", "1990", "6", "14"), PartialDate(1990, 6, 14)),
+            ("1990-06", post("date", "1990"), PartialDate(1990)),
+            ("1990-06-14", post("date", "1990", "6"), PartialDate(1990, 6)),
+            ("1990-06-14", post("date", "1991", "6", "14"), PartialDate(1991, 6, 14)),
+        ],
+    )
+    def test_editing_a_row_moves_it_between_precisions(
+        self, record_form, stored, entry, expected
+    ):
+        record = RecordFactory(date=stored)
+
+        form = record_form(entry, instance=record)
+
+        assert form.is_valid()
+        assert "date" in form.changed_data
+        form.save()
+        record.refresh_from_db()
+        assert record.date == expected
+
+    @pytest.mark.parametrize(
+        ("stored", "entry"),
+        [
+            ("1990", post("date", "1990")),
+            ("1990-06", post("date", "1990", "6")),
+            ("1990-06-14", post("date", "1990", "6", "14")),
+            ("0990-06", post("date", "990", "6")),
+            ("1850", post("date", "1850")),
+        ],
+    )
+    def test_saving_a_row_unchanged_reports_no_change_and_keeps_it(
+        self, record_form, stored, entry
+    ):
+        record = RecordFactory(date=stored)
+
+        form = record_form(entry, instance=record)
+
+        assert form.is_valid()
+        assert form.changed_data == []
+        form.save()
+        record.refresh_from_db()
+        assert record.date == PartialDate.fromisoformat(stored)
+
+    def test_an_optional_field_with_nothing_entered_stores_no_date(self, record_form):
+        record = RecordFactory(date="1990")
+
+        form = record_form(post("date"), instance=record)
+
+        assert form.is_valid()
+        form.save()
+        record.refresh_from_db()
+        assert record.date is None
+
+    def test_blank_makes_the_date_optional_and_its_absence_makes_it_required(self):
+        optional = Record._meta.get_field("date").formfield()
+        required = Event._meta.get_field("occurred").formfield()
+
+        assert optional.required is False
+        assert required.required is True
+
+    def test_verbose_name_and_help_text_become_label_and_help_text(self):
+        field = Record._meta.get_field("date")
+
+        formfield = field.formfield()
+
+        assert formfield.label == field.verbose_name.capitalize()
+        assert formfield.help_text == field.help_text
+
+    def test_an_empty_required_date_is_refused_as_required(self):
+        form = modelform_factory(Event, fields=["occurred"])(post("occurred"))
+
+        assert form.has_error("occurred", code="required")
+
+    def test_a_default_as_a_value_is_selected_on_a_new_row_and_stored_unchanged(
+        self, note_form
+    ):
+        form = note_form()
+
+        assert selected_parts(form, "drafted") == ["1990", "6", ""]
+
+        submitted = note_form(
+            {**post("drafted", "1990", "6"), **post("reviewed", "2000", "3")}
+        )
+        assert submitted.is_valid()
+        note = submitted.save(commit=False)
+        note.record = RecordFactory()
+        note.save()
+        note.refresh_from_db()
+        assert note.drafted == PartialDate(1990, 6)
+
+    def test_a_default_as_iso_text_is_selected_on_a_new_row_and_stored_unchanged(
+        self, record_form
+    ):
+        form = modelform_factory(Record, fields=["defaulted"])()
+
+        assert selected_parts(form, "defaulted") == ["1990", "", ""]
+
+        submitted = modelform_factory(Record, fields=["defaulted"])(
+            post("defaulted", "1990")
+        )
+        assert submitted.is_valid()
+        assert submitted.changed_data == []
+        assert submitted.save().defaulted == PartialDate(1990)
+
+    def test_a_default_as_a_callable_is_selected_on_a_new_row_and_stored_unchanged(
+        self, note_form
+    ):
+        form = note_form()
+
+        assert selected_parts(form, "reviewed") == ["2000", "3", ""]
+
+        submitted = note_form(
+            {
+                **post("drafted", "1990", "6"),
+                **post("reviewed", "2000", "3"),
+                "initial-reviewed": "2000-03",
+            }
+        )
+        assert submitted.is_valid()
+        assert "reviewed" not in submitted.changed_data
+        note = submitted.save(commit=False)
+        note.record = RecordFactory()
+        note.save()
+        note.refresh_from_db()
+        assert note.reviewed == PartialDate(2000, 3)
+
+    def test_a_posted_hidden_initial_does_not_hide_a_change(self, note_form):
+        submitted = note_form(
+            {
+                **post("drafted", "1990", "6"),
+                **post("reviewed", "2001"),
+                "initial-reviewed": "2000-03",
+            }
+        )
+
+        assert submitted.is_valid()
+        assert "reviewed" in submitted.changed_data
+
+    def test_a_duplicate_on_a_unique_field_is_refused_as_unique(self):
+        EventFactory(occurred="1990-06")
+        form = modelform_factory(Event, fields=["occurred"])(
+            post("occurred", "1990", "6")
+        )
+
+        assert form.has_error("occurred", code="unique")
+
+    def test_a_date_at_another_precision_is_not_a_duplicate(self):
+        EventFactory(occurred="1990-06")
+        form = modelform_factory(Event, fields=["occurred"])(post("occurred", "1990"))
+
+        assert form.is_valid()
+
+    @pytest.mark.parametrize("where", ["model", "form"])
+    def test_a_validator_receives_a_partial_date_and_its_error_is_on_the_field(
+        self, monkeypatch, record_form, where
+    ):
+        received = []
+
+        def not_before_1950(value):
+            received.append(value)
+            if value.year < 1950:
+                raise ValidationError("Too early.", code="too_early")
+
+        if where == "model":
+            field = Record._meta.get_field("date")
+            monkeypatch.setattr(field, "validators", [not_before_1950])
+            form = record_form(post("date", "1900", "6"))
+        else:
+            form = record_form(post("date", "1900", "6"))
+            form.fields["date"].validators.append(not_before_1950)
+            form.full_clean()
+
+        assert form.has_error("date", code="too_early")
+        assert received == [PartialDate(1900, 6)]
