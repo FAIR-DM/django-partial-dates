@@ -123,16 +123,13 @@ generalise: a date shown in the reader's locale at its own precision.
 
 ### R7 — Model history and other serialisers
 
-*task · advances G8*
+*delivered in [#29](https://github.com/FAIR-DM/django-partial-dates/issues/29) · advances G8*
 
-django-partial-date's empty values broke django-reversion. R2 covers Django's own serialisers.
-This item proves the remaining paths: model history tools that store serialised versions, and
-JSON produced by `django.core.serializers`.
-
-**Deliverables:**
-
-- Tests round-tripping values, empty ones included, through django-reversion and the JSON
-  serialiser
+Values come back unchanged, empty ones included, through the JSON written by
+`django.core.serializers` and through django-reversion: its stored versions, `field_dict`,
+reverting a row or a revision and recovering a deleted row. The tests run on SQLite and PostgreSQL
+and found no fault, so the field needed no change. django-reversion is a development dependency
+only.
 
 ## Aspirational goals
 

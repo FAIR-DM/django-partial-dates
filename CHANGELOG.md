@@ -20,7 +20,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ValueError` on save, and with a `ValidationError` coded `invalid` in `full_clean()`. It
   finds rows by exact match on a value or its text. The database refuses malformed text
   itself, by any route. `dumpdata` writes each value as its ISO form and each empty value as
-  empty, and `loaddata` reads them back, in JSON, JSON Lines and XML.
+  empty, and `loaddata` reads them back, in JSON, JSON Lines and XML. Values come back unchanged,
+  empty ones included, from JSON written by `django.core.serializers` and from django-reversion's
+  versions, including reverting a row and recovering a deleted one.
 - `year`, `month` and `day` lookups on `PartialDateField`, each taking a whole number and
   finding the rows whose recorded part equals it. A date with that part unknown is never found.
   They combine with `gt`, `gte`, `lt`, `lte`, `in`, `range` and `isnull`, and a filter on one
