@@ -25,7 +25,8 @@ the invented date from a recorded one.
 
 ## Status
 
-Pre-alpha. The package holds a partial date value so far. The model field is not written yet.
+Pre-alpha. The package holds a partial date value and a model field that stores it. Lookups
+beyond exact match, and form handling, are not written yet.
 
 ## Usage
 
@@ -127,6 +128,81 @@ True
 >>> PartialDate(1990) < PartialDate(1990, 6)
 True
 ```
+
+## Model field
+
+`PartialDateField` stores a `PartialDate` in one text column. Declare it as you would a
+`DateField`.
+
+```python
+from django.db import models
+
+from partial_dates import PartialDate, PartialDateField
+
+
+class Sample(models.Model):
+    collected = PartialDateField(null=True, blank=True)
+```
+
+The field takes a `PartialDate` or its ISO text, and gives back a `PartialDate`. The column
+holds the ISO form, so a row read by any other tool shows `1990`, `1990-06` or `1990-06-14`.
+
+```python
+>>> sample = Sample.objects.create(collected=PartialDate(1990, 6))
+>>> sample.refresh_from_db()
+>>> sample.collected
+PartialDate(year=1990, month=6, day=None)
+```
+
+Filtering by a value, or by its ISO text, finds the rows that hold exactly that value. A row
+holding `1990-06` is not found by `1990`.
+
+```python
+>>> Sample.objects.filter(collected=PartialDate(1990, 6)).count()
+1
+>>> Sample.objects.filter(collected="1990-06").count()
+1
+```
+
+Text that is not a partial date is refused when it is saved. `save()`, `create()`, `update()`,
+`bulk_create()` and `bulk_update()` raise `ValueError`, and a `datetime.date` or an integer is
+refused the same way. `full_clean()` reports it as a `ValidationError` with the code `invalid`
+on the field.
+
+```python
+>>> Sample.objects.create(collected="1990-6")
+Traceback (most recent call last):
+    ...
+ValueError: Not a partial date in ISO form: '1990-6'
+```
+
+An empty value is no date. `None` and `""` are both stored as `NULL` and read back as `None`,
+so a field that may be empty is declared with `null=True`, and `blank=True` lets a form leave
+it out. Without `null=True` the database refuses a missing date.
+
+The database checks the column itself. It refuses any text that is not `YYYY`, `YYYY-MM` or
+`YYYY-MM-DD` naming a real date, whichever route writes it: raw SQL, a data migration or
+another program. The check is created by the migration of the model that declares the field,
+and the package asks for no extra constraint. On PostgreSQL the column is also byte-order
+collated, so a database sort of the column is the same sort as `sorted()` on the values.
+
+### Fixtures
+
+`dumpdata` writes each value as its ISO form and an empty value as empty, and `loaddata` reads
+them back unchanged, in JSON, JSON Lines and XML. A fixture can be loaded into the same database
+or into the other supported one.
+
+```console
+$ python manage.py dumpdata app.Sample --format jsonl > samples.jsonl
+$ python manage.py loaddata samples.jsonl
+```
+
+```json
+{"model": "app.sample", "pk": 1, "fields": {"collected": "1990-06"}}
+{"model": "app.sample", "pk": 2, "fields": {"collected": null}}
+```
+
+A fixture holding text that is not a partial date, such as `1990-6`, is refused when it is loaded.
 
 ## Scope and philosophy
 

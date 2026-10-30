@@ -23,9 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
-# Django ("django>=5.2", the supported releases) is declared with the first module that
-# imports it. deptry fails a declared dependency nothing imports, so the skeleton has none.
-dependencies = []
+dependencies = ["django>=5.2"]
 
 [project.urls]
 Homepage = "https://github.com/FAIR-DM/django-partial-dates"
@@ -38,6 +36,7 @@ Changelog = "https://github.com/FAIR-DM/django-partial-dates/blob/main/CHANGELOG
 dev = [
     "mvp-shared[dev,test]",
     # The pre-commit template runs pydoclint, which the bundle at v0.6.0 does not carry.
+    "psycopg[binary]>=3.2",
     "pydoclint>=0.10.1",
 ]
 
@@ -71,8 +70,9 @@ extend = "ruff-base.toml"
 
 [tool.ruff.lint.extend-per-file-ignores]
 # S101: asserts are the point of a test. S105: the test settings carry a
-# placeholder SECRET_KEY.
-"tests/*" = ["S101", "S105"]
+# placeholder SECRET_KEY. S608: the database tests write raw SQL on purpose, with
+# quoted identifiers and bound values. S603: one test starts a fresh interpreter.
+"tests/*" = ["S101", "S105", "S603", "S608"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
@@ -93,5 +93,12 @@ extend_exclude = ["tests/", "docs/"]
 
 [tool.forge.conformance]
 # tests/test_init.py tests the package's top-level module, partial_dates/__init__.py, which the
-# mirror rule cannot name.
-non-mirror-paths = ["tests/test_init.py"]
+# mirror rule cannot name. The test app's models, migrations and fixtures are not modules under test.
+non-mirror-paths = [
+    "tests/test_init.py",
+    "tests/models.py",
+    "tests/test_models.py",
+    "tests/migrations/",
+    "tests/fixtures/",
+    "tests/conftest.py",
+]

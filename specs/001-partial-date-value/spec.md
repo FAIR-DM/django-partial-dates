@@ -71,7 +71,7 @@ their parts, precision and ISO form, and confirm invalid input is refused.
 12. **Given** a built partial date, **When** a developer tries to change one of its parts, **Then**
     the change is refused and the value is unchanged.
 13. **Given** invalid input, **When** it is refused, **Then** the error is Python's standard error
-    for an invalid value, and a project that has not installed Django can catch it.
+    for an invalid value, and code that has not configured Django can catch it.
 
 ---
 
@@ -167,7 +167,7 @@ every combination of precisions.
   the compact form without hyphens, times and EDTF level 1 markers are refused. Trimming what a
   person typed belongs to form handling (R4).
 - Q: Which error does refused input raise? → A: Python's standard error for an invalid value, so the
-  value works without Django installed. Turning it into a form or model error with a code is the
+  value works without Django configured. Turning it into a form or model error with a code is the
   field's and the form's job (R2, R4).
 - Q: Is a day-precision partial date equal to the real date for the same day? → A: No. A partial
   date is equal only to another partial date with the same recorded parts, and ordering against a
@@ -195,8 +195,8 @@ every combination of precisions.
 - **FR-005** (US1): Building or reading MUST refuse a day without a month, a month outside 1–12, a
   day that does not exist in its month and year, a year outside 0001–9999, and a part that is not
   a whole number.
-- **FR-006** (US1): Refused input MUST raise Python's standard error for an invalid value. The
-  feature MUST NOT add a runtime dependency, Django included.
+- **FR-006** (US1): Refused input MUST raise Python's standard error for an invalid value. Building,
+  reading and using a partial date MUST need no configured Django settings.
 - **FR-007** (US1): A partial date MUST be immutable. It MUST never hold a part that was not
   given to it.
 - **FR-008** (US2): Partial dates MUST be ordered as their ISO forms are ordered as text, through
@@ -232,7 +232,7 @@ every combination of precisions.
   precision "is earlier" rule FairDM uses today answers yes, so that rule can be replaced without
   a change in behaviour.
 - **SC-004**: Every valid ISO form from `0001` to `9999-12-31` reads and writes back unchanged.
-- **SC-005**: The package installs and the value works with no runtime dependency.
+- **SC-005**: The value works in code that has not configured Django.
 
 ## Assumptions
 

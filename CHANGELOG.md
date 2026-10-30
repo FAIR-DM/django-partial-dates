@@ -14,4 +14,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   so they work as set members and dictionary keys. A value has a `start` and an `end`, the
   first and last day of the period it covers, and `relation_to` says whether that period is
   before, after or overlapping another, as a `Relation`.
+- `PartialDateField`, a model field that stores a `PartialDate` in one ten-character text
+  column in its ISO form. It takes a `PartialDate` or its ISO text and gives back a
+  `PartialDate`, and stores `None` and `""` as `NULL`. It refuses any other value with
+  `ValueError` on save, and with a `ValidationError` coded `invalid` in `full_clean()`. It
+  finds rows by exact match on a value or its text. The database refuses malformed text
+  itself, by any route. `dumpdata` writes each value as its ISO form and each empty value as
+  empty, and `loaddata` reads them back, in JSON, JSON Lines and XML.
 - The package skeleton: packaging, continuous integration and the release flow.
+
+### Changed
+
+- Django is now a dependency of the package.

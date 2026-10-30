@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<django-objects version="1.0">
+  <object model="tests.record" pk="1">
+    <field name="date" type="CharField">1990</field>
+    <field name="other" type="CharField"><None></None></field>
+    <field name="defaulted" type="CharField">1990</field>
+  </object>
+  <object model="tests.record" pk="2">
+    <field name="date" type="CharField">1990-06</field>
+    <field name="other" type="CharField"><None></None></field>
+    <field name="defaulted" type="CharField">1990</field>
+  </object>
+  <object model="tests.record" pk="3">
+    <field name="date" type="CharField">1990-06-14</field>
+    <field name="other" type="CharField"><None></None></field>
+    <field name="defaulted" type="CharField">1990</field>
+  </object>
+  <object model="tests.record" pk="4">
+    <field name="date" type="CharField"><None></None></field>
+    <field name="other" type="CharField"><None></None></field>
+    <field name="defaulted" type="CharField">1990</field>
+  </object>
+</django-objects>
