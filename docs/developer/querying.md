@@ -61,7 +61,8 @@ the rows whose part equals it. A date whose part is unknown is never found.
 ```
 
 The field registers these as the transforms `Year`, `Month` and `Day` from
-`partial_dates.lookups`, so you never import them. Every date has a year, so `year` finds a date at every precision. `1990` has no month, so
+`partial_dates.lookups`, so you never import them. Every date has a year, so `year` finds a date
+at every precision. `1990` has no month, so
 `month=6` leaves it out. `1990-06` has no day, so `day=14` leaves it out, and `day=1` finds
 `1990-06-01` and not `1990-06`.
 
