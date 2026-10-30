@@ -2,8 +2,10 @@
 
 **Date:** 2026-10-29
 
-This document was designed against [GOALS.md](../GOALS.md). See also [CONTEXT.md](../CONTEXT.md)
-for domain terminology, [CONSTITUTION.md](../CONSTITUTION.md) for project standards and
+This document was designed against
+[GOALS.md](https://github.com/FAIR-DM/django-partial-dates/blob/main/GOALS.md). See also
+[CONTEXT.md](https://github.com/FAIR-DM/django-partial-dates/blob/main/CONTEXT.md) for domain terminology,
+[CONSTITUTION.md](https://github.com/FAIR-DM/django-partial-dates/blob/main/CONSTITUTION.md) for project standards and
 [ADR 0001](adr/0001-store-partial-dates-as-iso-8601-strings.md) for how a partial date is stored.
 
 ## Versioning

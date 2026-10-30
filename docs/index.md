@@ -6,7 +6,10 @@ holds a part nobody gave.
 
 ## Features
 
-- [Store a partial date](developer/index.md) in one text column, as its ISO form.
+- [Work with a partial date in Python](developer/values.md): an immutable value that sorts,
+  compares, hashes and says which period it covers.
+- [Store a partial date](developer/storing.md) in one text column, as its ISO form, with the
+  database refusing anything else.
 - [Filter partial dates](developer/querying.md) by year, month, day or a range, in the database,
   knowing which uncertain dates each filter includes.
 - [Order, select and group partial dates](developer/querying.md#order-by-the-date) by the date
@@ -76,7 +79,7 @@ out samples whose month nobody recorded.
 ## Next steps
 
 - [Developer guide](developer/index.md): store and query partial dates from Python.
-- [Reference](reference/prior-art.md): the packages this one replaces, and why.
+- [Reference](reference/index.md): the packages this one replaces, and why.
 
 ## About the project
 
@@ -92,9 +95,21 @@ out samples whose month nobody recorded.
 ## Support
 
 Report a problem or ask a question in the
-[issue tracker](https://github.com/FAIR-DM/django-partial-dates/issues).
+[issue tracker](https://github.com/FAIR-DM/django-partial-dates/issues). See
+[Contributing](contributing/index.md) for how to run the tests and work on the package. Everyone
+taking part follows the
+[code of conduct](https://github.com/FAIR-DM/.github/blob/main/CODE_OF_CONDUCT.md).
 
 ## Licence
 
 MIT. See the
 [licence](https://github.com/FAIR-DM/django-partial-dates/blob/main/LICENSE).
+
+```{toctree}
+:hidden:
+
+Home <self>
+developer/index
+reference/index
+contributing/index
+```

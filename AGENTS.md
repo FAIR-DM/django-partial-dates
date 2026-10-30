@@ -18,6 +18,7 @@ vocabulary is in `CONTEXT.md`, the rules are in `CONSTITUTION.md`, and the stora
 - **Type-check:** `uv run mypy`
 - **Dependency check:** `uv run deptry .`
 - **Build:** `uv build`
+- **Documentation:** `uv run --group docs sphinx-build -E -b html docs docs/_build`
 - **Bump the version:** `uv version`. Never edit `pyproject.toml` alone, because `uv.lock`
   records this package's own version too.
 

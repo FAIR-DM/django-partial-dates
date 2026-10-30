@@ -1,0 +1,35 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/docs.yml'
+  # Builds the site to prove it builds. The called workflow publishes from main only.
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'docs/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+# The called workflow has a Pages deploy job that needs pages and id-token write. A
+# caller must grant at least what its called jobs ask for, or the run fails at startup,
+# even on runs where the deploy is skipped.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  call-docs:
+    uses: django-mvp/shared/.github/workflows/docs.yml@v0.6.0
+    with:
+      uv-sync-args: '--group docs'
+    secrets: inherit

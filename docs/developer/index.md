@@ -1,11 +1,15 @@
 # Developer guide
 
 This guide is for a developer building a Django project with `django-partial-dates`. It covers
-installing the package, querying the dates it stores, entering them in a form, showing them to a
-reader, filtering them with django-filter, exposing them through Django REST framework and moving
+installing the package, working with a date in Python, storing it, querying the dates it stores,
+entering them in a form, showing them to a reader, filtering them with django-filter, exposing them through Django REST framework and moving
 a project from django-partial-date.
 
 - [Installation](installation.md): install the package and add the field to a model.
+- [Partial date values](values.md): build a `PartialDate`, read its parts, sort and compare it,
+  and ask which period it covers.
+- [Storing a partial date](storing.md): save and read a value, and see what the field does with
+  text that is not a date, with empty values and in fixtures.
 - [Querying](querying.md): filter partial dates by year, month, day or range, and find out which
   uncertain dates each filter includes.
 - [Entering a partial date](forms.md): use the form field in a model form, the admin or a plain
@@ -19,3 +23,30 @@ a project from django-partial-date.
 - [Moving from django-partial-date](moving-from-django-partial-date.md): convert a column
   django-partial-date wrote, point your old migrations at a stand-in field, and correct the values
   the conversion refuses.
+
+```{toctree}
+:hidden:
+:caption: Getting started
+
+installation
+```
+
+```{toctree}
+:hidden:
+:caption: Working with partial dates
+
+values
+storing
+querying
+forms
+showing
+filtering
+rest-framework
+```
+
+```{toctree}
+:hidden:
+:caption: Moving a project
+
+moving-from-django-partial-date
+```

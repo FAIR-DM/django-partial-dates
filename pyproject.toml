@@ -31,6 +31,7 @@ djangorestframework = ["djangorestframework>=3.18"]
 
 [project.urls]
 Homepage = "https://github.com/FAIR-DM/django-partial-dates"
+Documentation = "https://django-partial-dates.fairdm.org"
 Repository = "https://github.com/FAIR-DM/django-partial-dates"
 Changelog = "https://github.com/FAIR-DM/django-partial-dates/blob/main/CHANGELOG.md"
 
@@ -48,9 +49,14 @@ dev = [
     "psycopg[binary]>=3.2",
     "pydoclint>=0.10.1",
 ]
+docs = ["fairdm-docs"]
+
+[tool.fairdm.docs]
+title = "Django Partial Dates"
 
 [tool.uv.sources]
 mvp-shared = { git = "https://github.com/django-mvp/shared.git", tag = "v0.6.0" }
+fairdm-docs = { git = "https://github.com/FAIR-DM/fairdm-docs" }
 
 [build-system]
 requires = ["hatchling"]
