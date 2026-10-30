@@ -321,3 +321,13 @@ def migrate():
             return migration.apply(state, editor)
 
     return run
+
+
+@pytest.fixture
+def apply_backwards():
+    def apply(operation, old_state, new_state):
+        with connection.schema_editor() as editor:
+            operation.database_backwards(APP, editor, new_state, old_state)
+        return old_state
+
+    return apply

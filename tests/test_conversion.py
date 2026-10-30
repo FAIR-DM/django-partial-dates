@@ -485,3 +485,86 @@ class TestRefusal:
         apply_forwards(operation, state)
 
         assert read_column("conv_fixed", "seen") == [(101, "1990"), (102, "1990-06-14")]
+
+
+STORED_FORMS = [
+    "1990-01-01 00:00:00",
+    "1990-06-01 00:00:01",
+    "1990-06-14 00:00:02",
+    "0990-03-01 00:00:01",
+    "1800-06-14 00:00:02",
+    None,
+]
+
+
+@pytest.mark.django_db(transaction=True)
+class TestBackwards:
+    @pytest.fixture
+    def round_trip(
+        self,
+        build_state,
+        create_tables,
+        insert_rows,
+        read_column,
+        apply_forwards,
+        apply_backwards,
+    ):
+        def run(table, rows, meta=None, **options):
+            state = build_state(
+                table, {"seen": OldPartialDateField(**options)}, **(meta or {})
+            )
+            create_tables(state)
+            insert_rows(table, "seen", rows)
+            stored = read_column(table, "seen")
+            operation = ConvertPartialDateField(
+                "thing", "seen", PartialDateField(**options)
+            )
+            converted = apply_forwards(operation, state)
+            iso = read_column(table, "seen")
+            apply_backwards(operation, state, converted)
+            return stored, iso, operation, state
+
+        return run
+
+    @pytest.mark.parametrize("shape", ["nullable", "db_index", "nullable_unique"])
+    def test_every_stored_value_comes_back_and_converts_again(
+        self, shape, round_trip, read_column, apply_forwards
+    ):
+        options, _ = SHAPES[shape]
+        table = f"back_{shape}"
+
+        stored, iso, operation, state = round_trip(table, STORED_FORMS, **options)
+
+        assert read_column(table, "seen") == stored
+        apply_forwards(operation, state)
+        assert read_column(table, "seen") == iso
+
+    @pytest.mark.parametrize(("use_tz", "zone"), ZONES)
+    def test_values_come_back_in_any_session_zone(
+        self, round_trip, read_column, apply_forwards, settings, use_tz, zone
+    ):
+        settings.USE_TZ = use_tz
+        settings.TIME_ZONE = zone
+
+        stored, iso, operation, state = round_trip("back_zone", STORED_FORMS, null=True)
+
+        assert read_column("back_zone", "seen") == stored
+        apply_forwards(operation, state)
+        assert read_column("back_zone", "seen") == iso
+
+    @pytest.mark.parametrize("shape", SHAPES)
+    def test_column_equals_one_created_from_the_stand_in(
+        self, shape, round_trip, build_state, create_tables, describe_column
+    ):
+        options, meta = SHAPES[shape]
+        old, new = f"back_{shape}_old", f"back_{shape}_new"
+        round_trip(old, ["1990-01-01 00:00:00"], meta(old) if meta else None, **options)
+        create_tables(
+            build_state(
+                new,
+                {"seen": OldPartialDateField(**options)},
+                **(meta(new) if meta else {}),
+            )
+        )
+
+        assert describe_column(old, "seen") == describe_column(new, "seen")

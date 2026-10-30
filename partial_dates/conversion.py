@@ -19,6 +19,10 @@ FORWARD = (
 STORED = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2}) 00:00:0([012])")
 SHOWN = 20
 BATCH = 1000
+BACKWARD = (
+    "CASE LENGTH({c}) WHEN 4 THEN {c} || '-01-01 00:00:00' "
+    "WHEN 7 THEN {c} || '-01 00:00:01' ELSE {c} || ' 00:00:02' END"
+)
 
 
 class RefusedValuesError(Exception):
@@ -120,18 +124,56 @@ class ConvertPartialDateField(migrations.AlterField):
         to_model = to_state.apps.get_model(app_label, self.model_name)
         old = from_model._meta.get_field(self.name)
         new = to_model._meta.get_field(self.name)
+        self.check_vendor(schema_editor)
+        if not schema_editor.collect_sql:
+            self.refuse(schema_editor, from_model, old)
+        if schema_editor.connection.vendor == "postgresql":
+            self.convert_postgresql(schema_editor, from_model, old, new)
+        else:
+            self.convert_sqlite(schema_editor, from_model, old, new)
+
+    def database_backwards(
+        self,
+        app_label: str,
+        schema_editor: BaseDatabaseSchemaEditor,
+        from_state: ProjectState,
+        to_state: ProjectState,
+    ) -> None:
+        """Restore the old column and the timestamp each value was converted from.
+
+        Args:
+            app_label: The label of the app the model belongs to.
+            schema_editor: The editor of the database being migrated.
+            from_state: The state holding the new field.
+            to_state: The state holding the old field.
+        """
+        from_model = from_state.apps.get_model(app_label, self.model_name)
+        if not self.allow_migrate_model(schema_editor.connection.alias, from_model):
+            return
+        to_model = to_state.apps.get_model(app_label, self.model_name)
+        new = from_model._meta.get_field(self.name)
+        old = to_model._meta.get_field(self.name)
+        self.check_vendor(schema_editor)
+        if schema_editor.connection.vendor == "postgresql":
+            self.restore_postgresql(schema_editor, from_model, old, new)
+        else:
+            self.restore_sqlite(schema_editor, from_model, old, new)
+
+    def check_vendor(self, schema_editor: BaseDatabaseSchemaEditor) -> None:
+        """Refuse a database other than PostgreSQL and SQLite.
+
+        Args:
+            schema_editor: The editor of the database being migrated.
+
+        Raises:
+            NotSupportedError: The database is neither PostgreSQL nor SQLite.
+        """
         vendor = schema_editor.connection.vendor
         if vendor not in ("postgresql", "sqlite"):
             raise NotSupportedError(
                 f"Converting a django-partial-date column needs PostgreSQL or "
                 f"SQLite, not {vendor}."
             )
-        if not schema_editor.collect_sql:
-            self.refuse(schema_editor, from_model, old)
-        if vendor == "postgresql":
-            self.convert_postgresql(schema_editor, from_model, old, new)
-        else:
-            self.convert_sqlite(schema_editor, from_model, old, new)
 
     def refuse(
         self,
@@ -241,9 +283,7 @@ class ConvertPartialDateField(migrations.AlterField):
         column = quote(column_name)
         parameters = new.db_parameters(connection)
         collation = quote(cast(str, parameters["collation"]))
-        name = truncate_name(
-            f"{table}_{column_name}_check", connection.ops.max_name_length()
-        )
+        name = self.check_name(connection, table, column_name)
         unindexed_old = self.without_indexes(old)
         unindexed_new = self.without_indexes(new, null=old.null)
         schema_editor.alter_field(model, old, unindexed_old)
@@ -255,6 +295,83 @@ class ConvertPartialDateField(migrations.AlterField):
             None,
         )
         schema_editor.alter_field(model, unindexed_new, new)
+
+    def restore_postgresql(
+        self,
+        schema_editor: BaseDatabaseSchemaEditor,
+        model: type[models.Model],
+        old: models.Field,
+        new: models.Field,
+    ) -> None:
+        """Restore the column with one `ALTER TABLE` between two index changes.
+
+        Args:
+            schema_editor: The editor of the database being migrated.
+            model: The model, in the state holding the new field.
+            old: The old field.
+            new: The new field.
+        """
+        connection = schema_editor.connection
+        quote = connection.ops.quote_name
+        table = model._meta.db_table
+        column_name = new.db_column or new.attname
+        column = quote(column_name)
+        kind = old.db_parameters(connection)["type"]
+        name = self.check_name(connection, table, column_name)
+        unindexed_new = self.without_indexes(new)
+        unindexed_old = self.without_indexes(old, null=new.null)
+        schema_editor.alter_field(model, new, unindexed_new)
+        schema_editor.execute(
+            f"ALTER TABLE {quote(table)} DROP CONSTRAINT {quote(name)}, "
+            f"ALTER COLUMN {column} TYPE {kind} "
+            f"USING ({BACKWARD.format(c=column)})::{kind}",
+            None,
+        )
+        schema_editor.alter_field(model, unindexed_old, old)
+
+    def restore_sqlite(
+        self,
+        schema_editor: BaseDatabaseSchemaEditor,
+        model: type[models.Model],
+        old: models.Field,
+        new: models.Field,
+    ) -> None:
+        """Restore the column through a plain text column, rebuilding the table.
+
+        Args:
+            schema_editor: The editor of the database being migrated.
+            model: The model, in the state holding the new field.
+            old: The old field.
+            new: The new field.
+        """
+        quote = schema_editor.connection.ops.quote_name
+        column = quote(new.db_column or new.attname)
+        plain = self.plain_text_field(new)
+        unindexed_old = self.without_indexes(old, null=new.null)
+        schema_editor.alter_field(model, new, plain)
+        schema_editor.execute(
+            f"UPDATE {quote(model._meta.db_table)} "  # noqa: S608
+            f"SET {column} = {BACKWARD.format(c=column)}",  # names are quoted
+            None,
+        )
+        schema_editor.alter_field(model, plain, unindexed_old)
+        schema_editor.alter_field(model, unindexed_old, old)
+
+    @staticmethod
+    def check_name(connection: BaseDatabaseWrapper, table: str, column: str) -> str:
+        """Name the check constraint the conversion adds to a column.
+
+        Args:
+            connection: The database being migrated.
+            table: The table holding the column.
+            column: The name of the column.
+
+        Returns:
+            The name, cut to the length the database allows.
+        """
+        return truncate_name(
+            f"{table}_{column}_check", connection.ops.max_name_length()
+        )
 
     def convert_sqlite(
         self,
@@ -301,10 +418,10 @@ class ConvertPartialDateField(migrations.AlterField):
         """Build the text column the rows are rewritten in, with no check.
 
         Args:
-            field: The old field.
+            field: The field whose column is rewritten.
 
         Returns:
-            A `CharField` of ten characters with the old field's nullability.
+            A `CharField` of ten characters with the field's nullability.
         """
         return self.attached(
             field,
