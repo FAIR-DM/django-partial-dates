@@ -50,7 +50,7 @@ destroys what the column held beyond the ISO form, which is the loss G5 rules ou
 column that cannot be given FS-002's check. Stopping loses nothing and costs the developer a
 correction, and only they can say what a value meant. The rule is the same on both databases.
 
-**ADR:** none — the behaviour is in the spec.
+**ADR:** docs/adr/0002-convert-exactly-and-keep-a-stand-in-field.md
 
 ## D3 — What the old field displays is not the test
 
@@ -60,7 +60,7 @@ package's Python interface, because its precision setter does nothing, so a real
 sit under it. In the code read, both known users build their values from text, so neither should meet this
 refusal.
 
-**ADR:** none.
+**ADR:** docs/adr/0002-convert-exactly-and-keep-a-stand-in-field.md
 
 ## D4 — The operation reads in the connection's time zone
 
@@ -70,7 +70,7 @@ convert to the current time zone, and the conversion uses neither those nor the 
 A project whose settings changed after its rows were written has stored times that no longer fall
 on the three stored times, and D2 refuses them, instead of converting them a day out.
 
-**ADR:** none.
+**ADR:** docs/adr/0002-convert-exactly-and-keep-a-stand-in-field.md
 
 ## D5 — Existing migrations point at a stand-in field
 
@@ -86,7 +86,7 @@ Two ways to stop existing migrations importing the old package were considered.
 
 The spec names what the developer sees. The field's name and the shape of the edit are for the plan.
 
-**ADR:** none — a consequence of Django's migration model.
+**ADR:** docs/adr/0002-convert-exactly-and-keep-a-stand-in-field.md
 
 ## D6 — The operation takes the arguments of Django's field alteration
 
@@ -94,7 +94,7 @@ The spec names what the developer sees. The field's name and the shape of the ed
 arguments, the developer's edit to a generated migration is one word, and the migration state gets
 the field's options from the same place.
 
-**ADR:** none.
+**ADR:** none — the shape of one operation's arguments, stated in the spec.
 
 ## D7 — The conversion is reversible
 
@@ -102,14 +102,14 @@ The issue does not ask for it. A deployment that goes wrong needs to roll back, 
 maps back to exactly one stored value, so the cost is small. It restores the stored values
 exactly, because D2 means nothing was dropped on the way in.
 
-**ADR:** none.
+**ADR:** none — behaviour stated in the spec, with no alternative that lasts.
 
 ## D8 — No separate check command
 
 A refused migration changes nothing, so applying it to a copy of the data is the check. A separate
 command would be a second implementation of FR-002 (Article II).
 
-**ADR:** none.
+**ADR:** none — something not built, recorded here so it is not asked again.
 
 ## D9 — The guide includes what a project's own code changes
 
@@ -118,13 +118,13 @@ value class, and both known users call it directly (`PartialDate("2019")`, `.dat
 `PartialDate.YEAR`). The move is not finished without it, so the guide lists the replacements. The
 package adds no compatibility layer for them.
 
-**ADR:** none.
+**ADR:** none — the content of a guide.
 
 ## D10 — No prototype
 
 This feature changes no screens, so no prototype is made.
 
-**ADR:** none.
+**ADR:** none — nothing downstream inherits it.
 
 ## D11 — The stand-in field reports `CharField` to Django's schema editor
 
@@ -134,7 +134,7 @@ Reporting `CharField` removes the `USING` cast, and PostgreSQL then raises an er
 measured on both databases (`research.md`). It is one method and it costs nothing else, because the
 field is only ever read from migration history.
 
-**ADR:** none — a detail of the stand-in field, recorded with it in the ADR that covers that field.
+**ADR:** docs/adr/0002-convert-exactly-and-keep-a-stand-in-field.md
 
 ## D12 — The middle step of the conversion is a plain `CharField`
 
