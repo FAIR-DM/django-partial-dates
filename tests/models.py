@@ -37,3 +37,13 @@ class Event(models.Model):
         verbose_name=_("indexed date"),
         help_text=_("A date with a database index."),
     )
+
+
+class Sample(models.Model):
+    collected = PartialDateField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("collected"),
+        help_text=_("When the sample was collected."),
+    )
