@@ -77,6 +77,67 @@ class PartialDateFilterField(PartialDateField):
         return cast(PartialDate | None, super().clean(value))
 
 
+class PartialDateRangeWidget(forms.MultiWidget):
+    """Two filter widgets, named `<name>_after` and `<name>_before`.
+
+    Args:
+        attrs: HTML attributes for the widget, as for any Django widget.
+        years: The years the selects offer, as for `PartialDateWidget`.
+    """
+
+    def __init__(
+        self, attrs: dict[str, Any] | None = None, years: Iterable[int] | None = None
+    ) -> None:
+        widgets: dict[str, forms.Widget | type[forms.Widget]] = {
+            "after": PartialDateFilterWidget(years=years),
+            "before": PartialDateFilterWidget(years=years),
+        }
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value: Any) -> list[Any]:
+        """Split a range into its two bounds.
+
+        Args:
+            value: A `slice` of the two bounds, or `None`.
+
+        Returns:
+            The first and last bound, or two `None`s when there is no range.
+        """
+        if isinstance(value, slice):
+            return [value.start, value.stop]
+        return [None, None]
+
+
+class PartialDateRangeField(forms.MultiValueField):
+    """A form field of two optional partial dates, giving a `slice` of them.
+
+    Args:
+        years: The years the selects of both bounds offer.
+        **kwargs: Keyword arguments of `django.forms.Field`.
+    """
+
+    def __init__(self, *, years: Iterable[int] | None = None, **kwargs: Any) -> None:
+        kwargs.setdefault("widget", PartialDateRangeWidget(years=years))
+        fields = (
+            PartialDateFilterField(required=False, years=years),
+            PartialDateFilterField(required=False, years=years),
+        )
+        super().__init__(fields=fields, require_all_fields=False, **kwargs)
+
+    def compress(self, data_list: list[PartialDate | None]) -> slice | None:
+        """Join the two bounds, in the shape `django_filters.RangeFilter` takes.
+
+        Args:
+            data_list: The first and last bound, or an empty list for no entry.
+
+        Returns:
+            `None` when neither bound was entered, otherwise a `slice` of them.
+        """
+        if not data_list or data_list == [None, None]:
+            return None
+        return slice(*data_list)
+
+
 class PartialDateFilter(django_filters.Filter):
     """Filter a partial date column by a lookup, validating the entry as a date.
 
@@ -109,3 +170,33 @@ class PartialDateFilter(django_filters.Filter):
                 f"{self.lookup_expr!r}. Use one of {', '.join(COMPARISONS)}, or a "
                 f"part ({', '.join(PARTS)}) alone or followed by one of them."
             )
+
+
+class PartialDateRangeFilter(django_filters.RangeFilter):
+    """Filter a partial date column by two optional bounds.
+
+    The query parameters are `<name>_after` and `<name>_before`. A row is found when it
+    sorts at or after the first bound and at or before the last day of the period of
+    the second. The keyword arguments are those of `django_filters.Filter`, and
+    `years` is passed to the form field.
+
+    Attributes:
+        field_class: The form field that validates the bounds.
+    """
+
+    field_class = PartialDateRangeField
+
+    def filter(self, qs: Any, value: slice | None) -> Any:
+        """Take in the whole of the period the second bound names, then filter.
+
+        Args:
+            qs: The queryset to filter.
+            value: The `slice` of bounds the form field gives, or `None`.
+
+        Returns:
+            The queryset narrowed by the bounds entered.
+        """
+        if value is not None and value.stop is not None:
+            last = value.stop.end
+            value = slice(value.start, PartialDate(last.year, last.month, last.day))
+        return super().filter(qs, value)
