@@ -20,7 +20,9 @@ starts with an underscore. Lines are at most 88 characters.
   (US-1 1–3, FR-001 to FR-003), one value under two languages, with the language changed after the
   value was built (US-1 4, FR-004), `USE_THOUSAND_SEPARATOR` with a format that would group the year
   (US-1 5, FR-005), year 990 at all three precisions gives the same year text (US-1 6, FR-005), a
-  time zone far from UTC changes nothing (US-1 7, FR-006)
+  time zone far from UTC changes nothing (US-1 7, FR-006), `USE_I18N=False` with
+  `LANGUAGE_CODE="de"` gives the German text, and a language Django ships no formats for gives what
+  Django's own `date_format` gives for it (edge cases)
 - [ ] T002 [US1] SC-001: for every language in `settings.LANGUAGES`, the text of a year equals the
   year format applied to 1 January and to 31 December of it, and the text of a month equals the month
   format applied to its first and its last day. Class `TestDisplayFormNamesOnlyRecordedParts`
@@ -43,8 +45,8 @@ class with one declaration.
   `tests/test_templatetags/test_partial_dates.py`: a value renders its display form for the active
   language (US-2 1, FR-007), `None` renders empty and `default` works after it (US-2 2, FR-008), a
   string, a number, a `datetime.date` and an object render empty with no error (US-2 3, FR-008), and
-  the result is escaped: a value whose language format holds `'` or a test that the output is not a
-  `SafeString`, with the filter's `is_safe` left off (US-2 8, FR-009)
+  the result is escaped: the output is not a `SafeString`, and a format module whose format emits `<`
+  renders `&lt;` with autoescape on (US-2 8, FR-009)
 - [ ] T005 [US2] The Python route. Add to `TestDisplayForm`: inside `translation.override` it gives
   that language's text (US-2 5), it equals what the filter renders for each precision and with no
   request (US-2 4, FR-010), and a project's format module sets `YEAR_MONTH_FORMAT` and `DATE_FORMAT`
@@ -61,8 +63,8 @@ class with one declaration.
 
 ### Group 3
 
-- [ ] T008 [US2] `PartialDateDisplayMixin` in `partial_dates/admin.py`, its list half. A proxy model
-  and test-only admin as the plan says. Class `TestAdminList` in `tests/test_admin.py`: the column
+- [ ] T008 [US2] `PartialDateDisplayMixin` in `partial_dates/admin.py`, its list half. The admin fixture
+  as the plan says, with the expected heading read from the model field. Class `TestAdminList` in `tests/test_admin.py`: the column
   shows the display form and the ISO form is gone, it keeps its heading and is sorted by the stored
   order on the page and through `?o=` (US-2 9, FR-013, FR-014), it keeps the link to the row, by
   default and named in `list_display_links` (US-2 9), `list_editable` renders its selects and the POST
@@ -71,15 +73,16 @@ class with one declaration.
   alone (edge cases), and an admin with no mixin shows the ISO form (US-2 16). The English admin's
   list reads as US-1 8
 - [ ] T009 [US2] The change page. Class `TestAdminReadOnly`: a field in `readonly_fields` shows the
-  display form with its label and help text, in a default layout, in declared `fields` and in
+  display form with its label and help text, both read from the model field, in a default layout, in declared `fields` and in
   `fieldsets`, including a nested tuple (US-2 10, FR-013), an editable field keeps its selects and
   saving stores it, leaving the read-only field alone (US-2 13, FR-015), an empty read-only field
   shows the empty display (US-2 15), and the add page shows selects
 - [ ] T010 [US2] View-only and inlines. Class `TestAdminViewOnly`: a view-only user reads every
-  partial date as the display form, with no selects (US-2 12, FR-013, US-1 9), and a field in
-  `exclude` and one with `editable=False` stay off the page. An inline with the mixin shows the
-  display form on a read-only field (US-2 11, US-1 8) and on a view-only page. An inline a user may
-  add to keeps selects on its new rows. A user who may add but not change a row sees selects on the
+  partial date as the display form, with no selects (US-2 12, FR-013, US-1 9), and a field left out by `exclude`,
+  by `fields` or by the form's `Meta.fields` stays off the page. An inline with the mixin shows the
+  display form on a read-only field (US-2 11, US-1 8), on a view-only page, and for a user who may
+  view the parent and change the inline. An inline a user may add to keeps selects on its new rows,
+  with the parent changeable and with it read-only. A user who may add but not change a row sees selects on the
   add page. The admin display works with the app entry removed (US-2 17, second half)
 - [ ] T011 [US2] Documentation and example. The admin section of `docs/developer/showing.md`: the
   mixin, what it covers, the `__` case, and what an admin with no mixin shows. The example project as

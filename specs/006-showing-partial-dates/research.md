@@ -48,7 +48,9 @@ marked.
 | `readonly_fields` | display form, under the field's label with its help text |
 | A view-only user, on the row and in an inline | every partial date reads as the display form, with no selects |
 | The add page, for a superuser and for a user who may add but not change | selects, so the view-only rule must not apply when `obj` is `None` |
-| An inline row a user may add but not change | left editable, so the view-only rule on an inline also asks `has_add_permission` |
+| An inline a user may add to | left editable, so the rule on an inline asks `has_add_permission` first |
+| A user who may view the row and change its inline | the inline reads as the display form, because the rule also asks the parent admin |
+| A field the admin's form leaves out through `Meta.fields`, on a view-only page | stays off the page |
 | An empty value in a list and in a read-only field | the admin's empty value display |
 
 What the working shape depends on:
@@ -58,14 +60,20 @@ What the working shape depends on:
   field. Inline instances are created more than once per request, and that does no harm, because
   the form is built from one set and the page from another, and each set agrees with itself.
 - `get_readonly_fields` cannot call `get_fieldsets`, because `get_fields` calls back into it. It asks
-  `has_change_permission`, which needs nothing else.
-- `get_fields` gets the field's name from `form.base_fields` and the callable from
-  `get_readonly_fields`, so `get_fields` has to substitute and drop the repeat. A field read-only by
-  declaration then keeps its place in the form.
-- On a view-only page Django treats every name in the fieldsets as read-only
-  (`options.py:2178`), but the form is built first, so the callables must be in
-  `get_readonly_fields` as well. Only fields Django would show are added: an `editable=False` field
-  or one in `exclude` stays out.
+  permissions, which need nothing else.
+- `get_fields` gets a declared read-only field's name from `form.base_fields` and the callable from
+  `get_readonly_fields`, so it has to substitute and drop the repeat. The field keeps its place.
+- On a view-only page nothing is added to `readonly_fields`. Only names Django already lists are
+  substituted, so a field a form leaves out stays out by construction. `get_form` with `change=True`
+  excludes every name in `fields` (`options.py:862`), callables included. An inline's `get_formset`
+  has no such line, so the mixin passes it only the names that are strings.
+- When the parent is read-only, `get_inline_formsets` turns the inline's permissions off
+  (`options.py:2005`) while the inline still answers from its own, so the rule on an inline asks the
+  parent admin through `admin_site.get_model_admin`.
+- A user who may add to an inline gets a form for new rows built from the same fieldsets, and those
+  rows are rendered with `readonly_fields` alone (`helpers.py:358`). A callable in the fieldsets
+  there raises `KeyError`, so such an inline is never treated as read-only, and its existing rows
+  stay as Django shows them.
 - A callable that returns `None` prints `None` in a read-only field, because
   `AdminReadonlyField.contents` skips `display_for_value` for callables. It returns
   `get_empty_value_display()` instead.

@@ -38,8 +38,8 @@ def display_form(self) -> str:
 ```
 
 It maps `self.precision` to `"Y"`, `"YEAR_MONTH_FORMAT"` or `"DATE_FORMAT"` and returns
-`date_format(self.start, format)`. `django.utils.formats` is imported at the top of the module:
-the package already imports Django at its root.
+`date_format(self.start, format)`. `django.utils.formats` is imported at the top of the module,
+which needs no settings. Calling the method does, and its docstring says so.
 
 `__str__` and `isoformat()` do not change.
 
@@ -62,14 +62,18 @@ The behaviour, with the reasons in `research.md`, "The admin display, proved":
   `get_empty_value_display()` for an empty value. The admin instance keeps one per field.
 - **Which fields are read-only for this request**: those in the admin's own `readonly_fields`, or
   every partial date field when the whole object is read-only.
-- **The whole object is read-only** when `obj` is not `None`, the user may not change it, and, on an
-  inline, may not add to it either.
+- **The whole object is read-only** when `obj` is not `None` and the user may not change it. On an
+  inline, it is read-only when the user may not add to it and may not change both the parent, asked
+  through `admin_site.get_model_admin(parent_model)`, and the inline. `isinstance` on
+  `InlineModelAdmin` picks the rule.
 - **Substitution** replaces those names with the callables, including inside a nested `fields`
   tuple, and leaves everything else alone.
-- `get_readonly_fields` returns the substituted list, plus the callables of partial date fields
-  Django would show on a read-only page: editable and not in `get_exclude`.
+- `get_readonly_fields` returns the substituted list and adds nothing, so only names Django already
+  shows can change.
 - `get_fields` substitutes and drops the repeat. `get_fieldsets` substitutes in place, for declared
   `fieldsets`.
+- `get_formset`, on an inline, passes `fields` holding only the names that are strings, because
+  it does not exclude callables itself. `get_form` already does on a view-only page.
 - `get_list_display` and `get_list_display_links` substitute the model's partial date fields,
   except those in `list_editable`.
 
@@ -97,10 +101,13 @@ touched, which is the edge case the specification states.
   of 1 January 1990 with the same format. The text of `1990-06` must equal it for 1 June and 30 June.
   Text that changed with the unrecorded part would fail.
 - `tests/test_templatetags/test_partial_dates.py`, class `TestPartialDateFilter`.
-- `tests/test_admin.py`, new classes, using an admin registered with the mixin. `tests/admin.py`
-  stays as it is, and a new `Record` proxy model `DisplayedRecord` with its own admin keeps the
-  existing tests' admin unchanged. Its `readonly_fields`, `list_display` and `list_editable` are set
-  on a test-only `ModelAdmin`, reached by URL through `tests/urls.py`'s `admin.site`.
+- `tests/test_admin.py`, new classes. No new model and no migration. A fixture in
+  `tests/test_admin.py` takes a `ModelAdmin` class, registers it on a fresh `AdminSite`, and serves
+  that site for the test with `override_settings(ROOT_URLCONF=...)` on a throwaway module holding
+  its `urlpatterns`. Each case declares the admin it needs, on `Record` or `Note`. `tests/admin.py`
+  stays as it is.
+- Expected headings, labels and help text are read from the model field, and the test finds them by
+  the field's class or id, so none asserts fixed wording.
 - Permissions: a view-only user and an add-and-view user, built with `Permission` as
   `tests/test_admin.py` already does.
 - `tests/settings.py` gains `"partial_dates"`. Scenario 17 removes it with `modify_settings`.
@@ -113,7 +120,7 @@ partial_dates/templatetags/__init__.py        new
 partial_dates/templatetags/partial_dates.py   new
 partial_dates/admin.py                        new
 docs/developer/showing.md                     new
-tests/test_templatetags/                      new
+tests/test_templatetags/__init__.py, test_partial_dates.py   new
 tests/test_partial_date.py, test_admin.py, test_guide.py, admin.py, models.py, settings.py
 example/project/settings.py, example/samples/admin.py, seed.py, sample_list.html
 CONTEXT.md, README.md, CHANGELOG.md, docs/developer/index.md, docs/developer/installation.md,

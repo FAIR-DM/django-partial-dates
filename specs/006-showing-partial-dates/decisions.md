@@ -200,11 +200,35 @@ Django 5.2.18 and 6.1.2. `research.md` has the table and what the shape depends 
 
 **ADR:** none — evidence for the plan.
 
-## D18 — A user who may view a row and change its inline keeps the ISO form there
+## D18 — A user who may add to an inline keeps the ISO form on its existing rows
 
-When the parent is read-only, Django turns an inline's permissions off in `get_inline_formsets`
-while the inline itself still reports that it may be changed, so the mixin treats its rows as
-editable and the name stays. The text is the ISO form, which invents nothing, and the case needs a
-permission set nobody has asked for.
+Django builds new rows and existing rows from one set of fieldsets, and renders new rows with
+`readonly_fields` alone, so a date cannot be the display form on one and a select on the other. New
+rows must stay editable, so the existing rows of such an inline stay as Django shows them. The text
+is the ISO form, which invents nothing. This is narrower than the specification's US-2 scenario 12
+and is reported with the build.
 
 **ADR:** none — a narrow edge left as Django gives it.
+
+## D19 — Design review outcome
+
+Verdict: changes requested, one high finding. Each was checked by running it.
+
+- SEC-001 (high), remedied: the planned `get_readonly_fields` added every editable field on a
+  view-only page, so a date the admin's form leaves out through `Meta.fields` reached view-only
+  staff. The mixin now adds nothing and only substitutes names Django lists, and `get_formset`
+  passes string names. Proved on Django 5.2.18 and 6.1.2, and T010 tests it.
+- SPEC-001 (medium), remedied: a user who may view the parent and change the inline saw the ISO
+  form. The inline now asks the parent admin, and T010 tests it. D18 records the narrower case that
+  remains.
+- ARCH-001 (medium), remedied: one proxy model could not express the cases, and needed a migration
+  and a factory. Each test now declares its own admin on a fresh `AdminSite`, with no new model. The
+  `editable=False` case is dropped: the mixin substitutes only what Django lists, and the form-field
+  cases already exercise that.
+- SPEC-002 (low), taken: `USE_I18N=False` and a language with no formats join T001.
+- ARCH-002 (low), taken: headings, labels and help text are read from the model field.
+- Notes taken: the escaping test in T004 uses a format that emits `<`, `display_form` says it needs
+  settings, and `tests/test_templatetags/__init__.py` is in the plan. The note that the time zone
+  test guards rather than proves FR-006 is accepted.
+
+**ADR:** none — corrections to this feature's plan.
