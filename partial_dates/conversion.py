@@ -43,6 +43,11 @@ class RefusedValuesError(Exception):
             primary key first.
     """
 
+    model: str
+    field: str
+    count: int
+    rows: list[tuple[Any, str]]
+
     def __init__(
         self, model: str, field: str, count: int, rows: list[tuple[Any, str]]
     ) -> None:
@@ -246,8 +251,8 @@ class ConvertPartialDateField(migrations.AlterField):
             old: The old field.
 
         Yields:
-            The primary key and stored text of each refused value, in primary key
-            order. A `NULL` is never refused.
+            tuple[Any, str]: The primary key and stored text of each refused value, in
+                primary key order. A `NULL` is never refused.
         """
         connection = schema_editor.connection
         quote = connection.ops.quote_name
