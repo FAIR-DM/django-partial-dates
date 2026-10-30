@@ -158,6 +158,8 @@ says, and read what each shows.
   shows the ISO form. A developer who wants the display form there adds a method using the Python
   route.
 - A method or callable a developer writes for `list_display` is left alone.
+- A user who may add to an inline keeps the ISO form on that inline's existing rows. Django builds
+  new and existing rows from one list of fields, and the new rows have to stay editable.
 - The filter takes partial dates only. A `datetime.date`, including a period's start or end, already
   has Django's `date` filter, and gets empty text here as any other value does.
 
