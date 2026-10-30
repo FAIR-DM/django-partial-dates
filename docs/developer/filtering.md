@@ -486,6 +486,34 @@ database.
 'invalid'
 ```
 
+## Run the example project
+
+The repository holds a small project, in `example/`, whose list of samples carries a range filter
+on the `collected` date, so you can try it before you use it. Run these commands from a clone of
+the repository, once the development environment is installed with `uv sync`.
+
+1. Create the database and fill it.
+
+   ```console
+   $ uv run python example/manage.py migrate
+   $ uv run python example/manage.py seed
+   ```
+
+2. Start the server.
+
+   ```console
+   $ uv run python example/manage.py runserver 8033
+   ```
+
+3. Open `http://localhost:8033/`. Above the list are two groups of year, month and day selects,
+   the first and last date of the range. Choose a year for the first, and a year and a month for
+   the last, then select the filter button. The list shows the samples inside that stretch,
+   including every day of the last month, and the address in your browser holds your choice, so
+   you can copy it and open it again.
+
+The filter is declared in `example/samples/filters.py` and used by a `FilterView` in
+`example/samples/views.py`.
+
 ## Why a range takes in the whole of its last period
 
 A person asking for a range up to March means all of March. The `range` lookup takes a

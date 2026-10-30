@@ -2,16 +2,20 @@
 
 from django.http import HttpResponse
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, FormView, ListView, UpdateView
+from django.views.generic import CreateView, FormView, UpdateView
+from django_filters.views import FilterView
 
+from samples.filters import SampleFilter
 from samples.forms import PlainForm, SampleForm
 from samples.models import Sample
 
 
-class SampleList(ListView):
-    """List the samples."""
+class SampleList(FilterView):
+    """List the samples, narrowed by a range of collection dates."""
 
     model = Sample
+    filterset_class = SampleFilter
+    template_name = "samples/sample_list.html"
 
 
 class SampleCreate(CreateView):

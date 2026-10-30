@@ -1,6 +1,10 @@
 {% extends "samples/base.html" %}
 {% block content %}
 <h1>Samples</h1>
+<form method="get">
+  {{ filter.form.as_div }}
+  <button type="submit">Filter</button>
+</form>
 <ul>
   {% for sample in object_list %}
     <li>
