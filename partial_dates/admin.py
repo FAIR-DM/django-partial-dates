@@ -120,3 +120,67 @@ class PartialDateDisplayMixin(BaseModelAdmin):
         if links is None:
             return None
         return self.substitute(self.listed_names(), links)
+
+    def read_only_names(self, request: HttpRequest, obj: Any = None) -> set[str]:
+        """Name the partial date fields that are read-only for this request.
+
+        Args:
+            request: The current request.
+            obj: The object being shown, or `None` on the add page.
+
+        Returns:
+            The names in the admin's own `readonly_fields`.
+        """
+        return {
+            name
+            for name in super().get_readonly_fields(request, obj)
+            if isinstance(name, str)
+        }
+
+    def get_readonly_fields(self, request: HttpRequest, obj: Any = None) -> list[Any]:
+        """Show a read-only partial date field as its display form.
+
+        Args:
+            request: The current request.
+            obj: The object being shown, or `None` on the add page.
+
+        Returns:
+            The read-only fields, with each partial date field replaced by its
+            display callable. Nothing is added to what Django already lists.
+        """
+        return self.substitute(
+            self.read_only_names(request, obj),
+            super().get_readonly_fields(request, obj),
+        )
+
+    def get_fields(self, request: HttpRequest, obj: Any = None) -> list[Any]:
+        """Put the display callable of a read-only field where the field was.
+
+        Args:
+            request: The current request.
+            obj: The object being shown, or `None` on the add page.
+
+        Returns:
+            The fields of the form, with each read-only partial date field shown once.
+        """
+        names = self.read_only_names(request, obj)
+        return list(
+            dict.fromkeys(self.substitute(names, super().get_fields(request, obj)))
+        )
+
+    def get_fieldsets(self, request: HttpRequest, obj: Any = None) -> list[Any]:
+        """Substitute the read-only partial date fields in each fieldset.
+
+        Args:
+            request: The current request.
+            obj: The object being shown, or `None` on the add page.
+
+        Returns:
+            The fieldsets, with each read-only partial date field replaced by its
+            display callable.
+        """
+        names = self.read_only_names(request, obj)
+        return [
+            (title, {**options, "fields": self.substitute(names, options["fields"])})
+            for title, options in super().get_fieldsets(request, obj)
+        ]

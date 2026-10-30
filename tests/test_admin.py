@@ -441,3 +441,116 @@ class TestAdminList:
         response = admin_site.get(reverse("admin:tests_record_changelist"))
 
         assert cells(response, "date") == ["1990-06"]
+
+
+class ReadOnlyRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    readonly_fields = ["other"]
+
+
+class FieldsRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    fields = ["date", "other", "defaulted"]
+    readonly_fields = ["other"]
+
+
+class FieldsetsRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    fieldsets = [
+        ("Dates", {"fields": ["date", ("other", "defaulted")]}),
+        ("Again", {"fields": ["date"]}),
+    ]
+    readonly_fields = ["other"]
+
+
+def read_only_fields(response):
+    """The read-only fields the change page of an admin shows."""
+    return [
+        field
+        for fieldset in response.context["adminform"]
+        for line in fieldset
+        for field in line
+        if field.is_readonly
+    ]
+
+
+def read_only_texts(response):
+    """The text of every read-only value on a page."""
+    found = re.findall(
+        r'class="readonly">(.*?)</div>', response.content.decode(), re.DOTALL
+    )
+    return [html.unescape(strip_tags(text)).strip() for text in found]
+
+
+@pytest.mark.django_db
+class TestAdminReadOnly:
+    @pytest.mark.parametrize(
+        "admin_class", [ReadOnlyRecordAdmin, FieldsRecordAdmin, FieldsetsRecordAdmin]
+    )
+    def test_a_read_only_field_shows_the_display_form_in_each_layout(
+        self, admin_site, serve, admin_class
+    ):
+        serve((Record, admin_class))
+        record = RecordFactory(other=PartialDate(1991, 6, 14))
+
+        response = admin_site.get(
+            reverse("admin:tests_record_change", args=[record.pk])
+        )
+
+        assert read_only_texts(response) == [record.other.display_form()]
+        assert "1991-06-14" not in response.content.decode()
+
+    @pytest.mark.parametrize(
+        "admin_class", [ReadOnlyRecordAdmin, FieldsRecordAdmin, FieldsetsRecordAdmin]
+    )
+    def test_a_read_only_field_keeps_the_label_and_help_text_of_the_model_field(
+        self, admin_site, serve, admin_class
+    ):
+        serve((Record, admin_class))
+        record = RecordFactory(other=PartialDate(1991, 6, 14))
+
+        response = admin_site.get(
+            reverse("admin:tests_record_change", args=[record.pk])
+        )
+
+        (shown,) = read_only_fields(response)
+        model_field = Record._meta.get_field("other")
+        assert str(shown.field["label"]) == str(model_field.verbose_name)
+        assert str(shown.field["help_text"]) == str(model_field.help_text)
+        assert str(model_field.help_text) in response.content.decode()
+
+    def test_an_editable_field_keeps_its_selects_and_a_save_stores_it(
+        self, admin_site, serve
+    ):
+        serve((Record, ReadOnlyRecordAdmin))
+        record = RecordFactory(date=PartialDate(1990), other=PartialDate(1991, 6))
+        url = reverse("admin:tests_record_change", args=[record.pk])
+
+        page = admin_site.get(url).content.decode()
+        response = admin_site.post(
+            url, {**part("date", "1995", "3"), **part("defaulted", "1990")}
+        )
+
+        assert 'name="date_year"' in page
+        assert 'name="other_year"' not in page
+        assert response.status_code == 302
+        record.refresh_from_db()
+        assert record.date == PartialDate(1995, 3)
+        assert record.other == PartialDate(1991, 6)
+
+    def test_an_empty_read_only_field_shows_the_empty_display(self, admin_site, serve):
+        site = serve((Record, ReadOnlyRecordAdmin))
+        record = RecordFactory(other=None)
+
+        response = admin_site.get(
+            reverse("admin:tests_record_change", args=[record.pk])
+        )
+
+        empty = site.get_model_admin(Record).get_empty_value_display()
+        assert read_only_texts(response) == [empty]
+
+    def test_the_add_page_shows_selects(self, admin_site, serve):
+        serve((Record, ReadOnlyRecordAdmin))
+
+        response = admin_site.get(reverse("admin:tests_record_add"))
+
+        page = response.content.decode()
+        for name in ("date_year", "date_month", "date_day"):
+            assert f'name="{name}"' in page
