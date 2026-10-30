@@ -122,3 +122,64 @@ class TestApp:
 
         assert "partial_date" not in imported
         assert "partial_dates" in imported
+
+
+class TestDatabases:
+    @pytest.mark.parametrize(("model", "column", "attribute", "nullable"), SUBJECTS)
+    def test_new_database_has_the_column_a_new_table_gets(
+        self, migrate_to, schemas, new_columns, model, column, attribute, nullable
+    ):
+        migrate_to(EMPTY)
+        migrate_to(LATEST)
+
+        schema = schemas()[model]
+
+        assert schema == new_columns[model]
+        assert schema["check"]["0002-02"] is True
+        assert schema["check"]["garbage"] is False
+
+    @pytest.mark.parametrize(("model", "column", "attribute", "nullable"), SUBJECTS)
+    def test_deployed_database_runs_only_the_conversion(
+        self,
+        migrate_to,
+        pending,
+        write_old_rows,
+        read_dates,
+        model,
+        column,
+        attribute,
+        nullable,
+    ):
+        migrate_to(BEFORE)
+        write_old_rows(model, column, nullable)
+
+        assert pending() == [LATEST]
+        migrate_to(LATEST)
+
+        assert read_dates(model, attribute) == CONVERTED[: None if nullable else -1]
+
+    @pytest.mark.parametrize(("model", "column", "attribute", "nullable"), SUBJECTS)
+    def test_database_behind_converts_through_the_rebuild(
+        self, migrate_to, write_old_rows, read_dates, model, column, attribute, nullable
+    ):
+        migrate_to(FIRST)
+        write_old_rows(model, column, nullable)
+
+        migrate_to(LATEST)
+
+        assert read_dates(model, attribute) == CONVERTED[: None if nullable else -1]
+
+    @pytest.mark.parametrize("start", [BEFORE, FIRST], ids=["0003", "0001"])
+    def test_every_route_ends_on_the_same_schema(
+        self, migrate_to, write_old_rows, schemas, start
+    ):
+        migrate_to(EMPTY)
+        migrate_to(LATEST)
+        from_empty = schemas()
+
+        migrate_to(start)
+        write_old_rows(Sighting, "seen_on", True)
+        write_old_rows(Survey, "taken", False)
+        migrate_to(LATEST)
+
+        assert schemas() == from_empty
