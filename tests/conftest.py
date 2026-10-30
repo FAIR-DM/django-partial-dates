@@ -1,7 +1,8 @@
 import re
 
 import pytest
-from django.db import connection
+from django.db import DatabaseError, connection, models, transaction
+from django.db.migrations.state import ModelState, ProjectState
 
 from tests.factories import EventFactory, RecordFactory, SampleFactory
 
@@ -133,3 +134,146 @@ def guide_samples(db):
         None,
     ]
     return [SampleFactory(collected=text) for text in texts]
+
+
+APP = "conv"
+GOOD_TEXTS = ["0002", "0002-02", "0002-02-02"]
+BAD_TEXTS = ["0002-13", "0002-02-30", "garbage", "0002-02-02 00:00:00", "00020202"]
+
+
+@pytest.fixture
+def build_state():
+    def build(table, fields, name="Thing", state=None, **options):
+        state = state or ProjectState()
+        state.add_model(
+            ModelState(
+                APP,
+                name,
+                [("id", models.AutoField(primary_key=True)), *fields.items()],
+                {"db_table": table, **options},
+            )
+        )
+        return state
+
+    return build
+
+
+@pytest.fixture
+def create_tables():
+    created = []
+
+    def create(state):
+        with connection.schema_editor() as editor:
+            for model in state.apps.get_models():
+                if model._meta.app_label == APP:
+                    editor.create_model(model)
+                    created.append(model._meta.db_table)
+
+    yield create
+
+    with connection.cursor() as cursor:
+        for table in created:
+            cursor.execute(f"DROP TABLE IF EXISTS {connection.ops.quote_name(table)}")
+
+
+@pytest.fixture
+def insert_rows():
+    def insert(table, column, values):
+        quote = connection.ops.quote_name
+        with connection.cursor() as cursor:
+            for value in values:
+                cursor.execute(
+                    f"INSERT INTO {quote(table)} ({quote(column)}) VALUES (%s)",
+                    [value],
+                )
+
+    return insert
+
+
+@pytest.fixture
+def read_column():
+    def read(table, column):
+        quote = connection.ops.quote_name
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"SELECT id, CAST({quote(column)} AS TEXT) FROM {quote(table)} "
+                "ORDER BY id"
+            )
+            return cursor.fetchall()
+
+    return read
+
+
+@pytest.fixture
+def apply_forwards():
+    def apply(operation, state):
+        target = state.clone()
+        operation.state_forwards(APP, target)
+        with connection.schema_editor() as editor:
+            operation.database_forwards(APP, editor, state, target)
+        return target
+
+    return apply
+
+
+@pytest.fixture
+def check_behaviour():
+    def probe(table, column):
+        quote = connection.ops.quote_name
+        sql = f"INSERT INTO {quote(table)} ({quote(column)}) VALUES (%s)"
+        accepted = {}
+        for text in [*GOOD_TEXTS, *BAD_TEXTS]:
+            try:
+                with transaction.atomic(), connection.cursor() as cursor:
+                    cursor.execute(sql, [text])
+                    transaction.set_rollback(True)
+                accepted[text] = True
+            except DatabaseError:
+                accepted[text] = False
+        return accepted
+
+    return probe
+
+
+@pytest.fixture
+def describe_column(check_behaviour):
+    def describe(table, column):
+        quote = connection.ops.quote_name
+        with connection.cursor() as cursor:
+            if connection.vendor == "postgresql":
+                cursor.execute(
+                    "SELECT data_type, character_maximum_length, collation_name, "
+                    "is_nullable FROM information_schema.columns "
+                    "WHERE table_name = %s AND column_name = %s",
+                    [table, column],
+                )
+                kind, length, collation, nullable = cursor.fetchone()
+                cursor.execute(
+                    "SELECT indexdef FROM pg_indexes WHERE tablename = %s", [table]
+                )
+                indexes = sorted(
+                    re.sub(r"^CREATE (UNIQUE )?INDEX \S+ ON \S+ ", r"\1", row[0])
+                    for row in cursor.fetchall()
+                )
+            else:
+                cursor.execute(f"PRAGMA table_info({quote(table)})")
+                info = next(row for row in cursor.fetchall() if row[1] == column)
+                kind, nullable = info[2], "NO" if info[3] else "YES"
+                length = collation = None
+                indexes = []
+                cursor.execute(f"PRAGMA index_list({quote(table)})")
+                for _, name, unique, _, _ in cursor.fetchall():
+                    cursor.execute(f"PRAGMA index_info({quote(name)})")
+                    columns = tuple(row[2] for row in cursor.fetchall())
+                    indexes.append((unique, columns))
+                indexes.sort()
+        return {
+            "type": kind,
+            "length": length,
+            "collation": collation,
+            "nullable": nullable,
+            "indexes": indexes,
+            "check": check_behaviour(table, column),
+        }
+
+    return describe
