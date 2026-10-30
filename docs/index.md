@@ -6,7 +6,10 @@ holds a part nobody gave.
 
 ## Features
 
-- [Store a partial date](developer/index.md) in one text column, as its ISO form.
+- [Work with a partial date in Python](developer/values.md): an immutable value that sorts,
+  compares, hashes and says which period it covers.
+- [Store a partial date](developer/storing.md) in one text column, as its ISO form, with the
+  database refusing anything else.
 - [Filter partial dates](developer/querying.md) by year, month, day or a range, in the database,
   knowing which uncertain dates each filter includes.
 - [Order, select and group partial dates](developer/querying.md#order-by-the-date) by the date

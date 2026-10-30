@@ -18,6 +18,8 @@ MOVING_GUIDE = ROOT / "docs" / "developer" / "moving-from-django-partial-date.md
 FORMS_GUIDE = GUIDE.parent / "forms.md"
 FILTERING_GUIDE = GUIDE.parent / "filtering.md"
 SHOWING_GUIDE = GUIDE.parent / "showing.md"
+VALUES_GUIDE = GUIDE.parent / "values.md"
+STORING_GUIDE = GUIDE.parent / "storing.md"
 FENCED_PYTHON = re.compile(r"^```python\n(.*?)^```", re.DOTALL | re.MULTILINE)
 LISTED_ROWS = re.compile(r"^for text in (\[.*?\]):$", re.DOTALL | re.MULTILINE)
 GUIDE_BLOCK = re.compile(
@@ -84,6 +86,41 @@ class TestShowingExamples:
         parser = doctest.DocTestParser()
         test = parser.get_doctest(
             "\n".join(blocks), {}, "showing", str(SHOWING_GUIDE), 0
+        )
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
+        report = []
+
+        results = runner.run(test, out=report.append, clear_globs=False)
+
+        assert results.attempted > 0
+        assert results.failed == 0, "".join(report)
+
+
+class TestValuesExamples:
+    def test_every_example_on_the_values_page_runs_and_prints_what_it_shows(self):
+        blocks = FENCED_PYTHON.findall(VALUES_GUIDE.read_text())
+        parser = doctest.DocTestParser()
+        test = parser.get_doctest("\n".join(blocks), {}, "values", str(VALUES_GUIDE), 0)
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
+        report = []
+
+        results = runner.run(test, out=report.append, clear_globs=False)
+
+        assert results.attempted > 0
+        assert results.failed == 0, "".join(report)
+
+
+@pytest.mark.django_db
+class TestStoringExamples:
+    def test_every_example_on_the_storing_page_runs_and_prints_what_it_shows(self):
+        blocks = FENCED_PYTHON.findall(STORING_GUIDE.read_text())
+        parser = doctest.DocTestParser()
+        test = parser.get_doctest(
+            "\n".join(blocks), {"Sample": Sample}, "storing", str(STORING_GUIDE), 0
         )
         runner = doctest.DocTestRunner(
             optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL

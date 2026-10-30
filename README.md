@@ -12,9 +12,10 @@
 [![Licence](https://img.shields.io/github/license/FAIR-DM/django-partial-dates)](https://github.com/FAIR-DM/django-partial-dates/blob/main/LICENSE)
 
 A Django model field for dates that are known only to the year, to the month or to the day:
-`1990`, `1990-06` or `1990-06-14`.
+`1990`, `1990-06` or `1990-06-14`. It stores a date at the precision it was recorded at, and never
+more.
 
-The documentation is at <https://django-partial-dates.fairdm.org>.
+**Documentation: <https://django-partial-dates.fairdm.org>**
 
 ## Why
 
@@ -23,332 +24,55 @@ project started "in June 2014", an affiliation ended "some time in 2019". Django
 cannot hold any of these without inventing a day and a month, and once it has, nothing can tell
 the invented date from a recorded one.
 
-`django-partial-dates` stores a date at the precision it was recorded at, and never more.
+## Quickstart
 
-## Status
+The package is pre-alpha. It needs Python 3.12 or later, Django 5.2 or later, and PostgreSQL or
+SQLite.
 
-Pre-alpha. The package holds a partial date value and a model field that stores it, and the
-field filters, orders, selects and groups by year, month, day and range in the database. A form
-field and widget enter a partial date as a year, a month and a day select. The model field gives
-them to model forms and the admin, so there is nothing to configure. A migration operation converts
-a column written by django-partial-date. Two optional extras add ready-made filters for django-filter
-and a serializer field for Django REST framework.
-
-## Usage
-
-A `PartialDate` holds a year and, when they were recorded, a month and a day. A part that was
-not recorded is `None`.
-
-```python
->>> from partial_dates import PartialDate, Precision
->>> PartialDate(1990)
-PartialDate(year=1990, month=None, day=None)
->>> PartialDate(1990, 6, 14)
-PartialDate(year=1990, month=6, day=14)
+```console
+$ pip install django-partial-dates
 ```
 
-`PartialDate.fromisoformat` reads the three ISO forms, `YYYY`, `YYYY-MM` and `YYYY-MM-DD`, and
-nothing else. `isoformat()` writes the form back, and reading it gives an equal value.
-
-```python
->>> value = PartialDate.fromisoformat("1990-06")
->>> value == PartialDate(1990, 6)
-True
->>> value.isoformat()
-'1990-06'
->>> str(PartialDate(990))
-'0990'
-```
-
-The `precision` of a value says how much of it was recorded.
-
-```python
->>> value.year, value.month, value.day
-(1990, 6, None)
->>> value.precision is Precision.MONTH
-True
-```
-
-A value is immutable. Building or reading one that is not a date, such as a day without a month,
-`1990-02-30` or a year outside 0001 to 9999, raises `ValueError`.
-
-```python
->>> PartialDate.fromisoformat("1990-6")
-Traceback (most recent call last):
-    ...
-ValueError: Not a partial date in ISO form: '1990-6'
-```
-
-Values sort in the order of their ISO forms, so a year comes before its months and a month before
-its days. Two values are equal when all their parts are equal: `1990` is not `1990-01-01`.
-
-```python
->>> values = [
-...     PartialDate(1991),
-...     PartialDate(1990, 6, 14),
-...     PartialDate(1990),
-...     PartialDate(1990, 6),
-... ]
->>> [value.isoformat() for value in sorted(values)]
-['1990', '1990-06', '1990-06-14', '1991']
->>> PartialDate(1990) == PartialDate(1990, 1, 1)
-False
-```
-
-Values are hashable, so they work as set members and dictionary keys. A value is never equal to a
-`datetime.date`, a string or an integer, and ordering against one raises `TypeError`.
-
-```python
->>> len({PartialDate(1990, 6), PartialDate.fromisoformat("1990-06")})
-1
->>> counts = {PartialDate(1990, 6): 3}
->>> counts[PartialDate.fromisoformat("1990-06")]
-3
-```
-
-A value covers a period. `start` and `end` give its first and last day as `datetime.date`
-objects, with the last day of February worked out for the year.
-
-```python
->>> PartialDate(1990).start, PartialDate(1990).end
-(datetime.date(1990, 1, 1), datetime.date(1990, 12, 31))
->>> PartialDate(2000, 2).end
-datetime.date(2000, 2, 29)
->>> PartialDate(1990, 6, 14).start == PartialDate(1990, 6, 14).end
-True
-```
-
-`relation_to` says whether the period of one value is `Relation.BEFORE`, `Relation.AFTER` or
-`Relation.OVERLAPPING` the period of another. Sorting and "is this one earlier?" are different
-questions: `1990` sorts before `1990-06`, but the two overlap, so neither is earlier. Passing
-anything but a `PartialDate` raises `TypeError`.
-
-```python
->>> from partial_dates import Relation
->>> PartialDate(1990, 6).relation_to(PartialDate(1991)) is Relation.BEFORE
-True
->>> PartialDate(1991).relation_to(PartialDate(1990, 6)) is Relation.AFTER
-True
->>> PartialDate(1990).relation_to(PartialDate(1990, 6)) is Relation.OVERLAPPING
-True
->>> PartialDate(1990) < PartialDate(1990, 6)
-True
-```
-
-## Model field
-
-`PartialDateField` stores a `PartialDate` in one text column. Declare it as you would a
-`DateField`.
+Declare the field on a model, then make and apply the migration.
 
 ```python
 from django.db import models
 
-from partial_dates import PartialDate, PartialDateField
+from partial_dates import PartialDateField
 
 
 class Sample(models.Model):
-    collected = PartialDateField(null=True, blank=True)
-```
-
-The field takes a `PartialDate` or its ISO text, and gives back a `PartialDate`. The column
-holds the ISO form, so a row read by any other tool shows `1990`, `1990-06` or `1990-06-14`.
-
-```python
->>> sample = Sample.objects.create(collected=PartialDate(1990, 6))
->>> sample.refresh_from_db()
->>> sample.collected
-PartialDate(year=1990, month=6, day=None)
-```
-
-Filtering by a value, or by its ISO text, finds the rows that hold exactly that value. A row
-holding `1990-06` is not found by `1990`.
-
-```python
->>> Sample.objects.filter(collected=PartialDate(1990, 6)).count()
-1
->>> Sample.objects.filter(collected="1990-06").count()
-1
-```
-
-Text that is not a partial date is refused when it is saved. `save()`, `create()`, `update()`,
-`bulk_create()` and `bulk_update()` raise `ValueError`, and a `datetime.date` or an integer is
-refused the same way. `full_clean()` reports it as a `ValidationError` with the code `invalid`
-on the field.
-
-```python
->>> Sample.objects.create(collected="1990-6")
-Traceback (most recent call last):
-    ...
-ValueError: Not a partial date in ISO form: '1990-6'
-```
-
-An empty value is no date. `None` and `""` are both stored as `NULL` and read back as `None`,
-so a field that may be empty is declared with `null=True`, and `blank=True` lets a form leave
-it out. Without `null=True` the database refuses a missing date.
-
-The database checks the column itself. It refuses any text that is not `YYYY`, `YYYY-MM` or
-`YYYY-MM-DD` naming a real date, whichever route writes it: raw SQL, a data migration or
-another program. The check is created by the migration of the model that declares the field,
-and the package asks for no extra constraint. On PostgreSQL the column is also byte-order
-collated, so a database sort of the column is the same sort as `sorted()` on the values.
-
-### Fixtures
-
-`dumpdata` writes each value as its ISO form and an empty value as empty, and `loaddata` reads
-them back unchanged, in JSON, JSON Lines and XML. A fixture can be loaded into the same database
-or into the other supported one.
-
-```console
-$ python manage.py dumpdata app.Sample --format jsonl > samples.jsonl
-$ python manage.py loaddata samples.jsonl
-```
-
-```json
-{"model": "app.sample", "pk": 1, "fields": {"collected": "1990-06"}}
-{"model": "app.sample", "pk": 2, "fields": {"collected": null}}
-```
-
-A fixture holding text that is not a partial date, such as `1990-6`, is refused when it is loaded.
-
-## Forms
-
-`partial_dates.forms.PartialDateField` enters a partial date in a form, with a year, a month and
-a day select. The user gives the parts they know and leaves the rest empty. It needs no entry in
-`INSTALLED_APPS` and no JavaScript.
-
-```python
->>> from django import forms
->>> from partial_dates.forms import PartialDateField
->>> class EventForm(forms.Form):
-...     happened = PartialDateField()
->>> form = EventForm({"happened_year": "1990", "happened_month": "6", "happened_day": ""})
->>> form.is_valid()
-True
->>> form.cleaned_data["happened"]
-PartialDate(year=1990, month=6, day=None)
-```
-
-A model form and the admin show the same selects for a `PartialDateField`, with no form or widget
-to declare. The field's `blank`, `verbose_name`, `help_text`, default and `unique` carry over. With
-nothing said, the year select lists the years from the current year down to 1900, and
-`PartialDateWidget(years=...)` names others.
-
-A day without a month is refused with the error code `incomplete`, never dropped, and a date that
-does not exist is refused with `invalid`. A form opened on a stored date selects exactly the parts
-it records. The
-[forms guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/forms.md)
-says what each error means, how to limit the dates with a validator, and how to try the field in
-the example project on localhost.
-
-## Showing a date
-
-`PartialDate.display_form()` gives the text a reader should see, at the precision the date was
-recorded at and in the language active when you call it. A year reads as a year, a month as a month
-and year, and a day as a full date. No part that nobody recorded appears.
-
-```python
->>> PartialDate(1990).display_form()
-'1990'
->>> PartialDate(1990, 6).display_form()
-'June 1990'
->>> PartialDate(1990, 6, 14).display_form()
-'June 14, 1990'
-```
-
-In a template, add `"partial_dates"` to `INSTALLED_APPS`, then `{% load partial_dates %}` and
-write `{{ value|partial_date }}`. An empty value renders as empty text. The method needs no app
-entry.
-
-In the admin, put `PartialDateDisplayMixin` from `partial_dates.admin` before `ModelAdmin` or an
-inline in the bases, and a list, a read-only field and a page a user may only view show the display
-form. It needs no app entry.
-
-`str()` and `isoformat()` still give the ISO form in every language. The
-[showing guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/showing.md)
-shows other languages and says what each precision uses.
-
-## Querying
-
-The field filters in the database by the year, month and day of a date, and by a range whose
-bounds are partial dates. It orders by the date, selects and counts by each part, and gives each
-date as a real date for a chart axis. A date that might or might not match a filter has one
-defined result.
-
-```python
-Sample.objects.filter(collected__month=6)  # 1990-06 and 1990-06-14, but not 1990
-Sample.objects.filter(collected__gte="1990-06", collected__lt="1991")
-Sample.objects.order_by(F("collected").asc(nulls_last=True))
-Sample.objects.values_list("collected__year").annotate(total=Count("pk"))
-Sample.objects.values_list("collected__start")  # 1990 is date(1990, 1, 1)
-```
-
-The [querying guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/querying.md)
-says which uncertain dates each filter includes, and gives recipes for June of any year, a date
-axis, a drilldown from year to day, and the other rules a range can follow. It also says where
-each database sorts a row holding no date, and how to choose.
-
-## Filtering with django-filter
-
-Install the `django-filter` extra to filter a list of records by a partial date. The extra adds
-django-filter and nothing else, and the core package never imports it.
-
-```console
-$ pip install "django-partial-dates[django-filter]"
+    collected = PartialDateField(null=True, blank=True, db_index=True)
 ```
 
 ```python
-import django_filters
+from partial_dates import PartialDate
 
-from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
-
-
-class SampleFilter(django_filters.FilterSet):
-    collected = PartialDateFilter()
-    when = PartialDateRangeFilter(field_name="collected")
+Sample.objects.create(collected=PartialDate(1990, 6))
+Sample.objects.filter(collected__month=6)
 ```
 
-A person sees the year, month and day selects and gives as much of the date as they know, and an
-API client sends the ISO form, as in `?when_after=1990-06&when_before=1991-03`. An entry that is
-not a partial date is reported as an error on the filter. The range includes the whole of the
-period its second bound names, so `1991-03` takes in `1991-03-15`. The
-[filtering guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/filtering.md)
-says which uncertain dates each filter includes, how to filter on a year, month or day and across
-a relation, and how to ask for another rule.
+The first line stores `1990-06`. The second finds every sample collected in a June, and leaves out
+samples whose month nobody recorded.
 
-## Django REST framework
+## Features
 
-Install the `djangorestframework` extra to read and write a partial date in an API. The extra
-adds Django REST framework and nothing else, and the core package never imports it.
-
-```console
-$ pip install "django-partial-dates[djangorestframework]"
-```
-
-```python
-from rest_framework import serializers
-
-from partial_dates.rest_framework import PartialDateField
-
-
-class SampleSerializer(serializers.Serializer):
-    collected = PartialDateField()
-```
-
-A client reads `1990`, `1990-06` or `1990-06-14`, or `null` when a record has no date, and writes
-the same text. Anything else, including an empty string, is reported as a validation error with
-the code `invalid`. The
-[Django REST framework guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/rest-framework.md)
-shows how to save the value with a `ModelSerializer`, how to require a date, and how to use the
-field across a project.
-
-## Moving from django-partial-date
-
-`ConvertPartialDateField` converts a column written by django-partial-date to a
-`PartialDateField` in place, on PostgreSQL and SQLite, and keeps every value. It stops before
-changing anything when a value is not exactly what django-partial-date writes. The
-[guide to the move](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/moving-from-django-partial-date.md)
-takes you through changing your existing migrations, converting the columns and uninstalling
-django-partial-date.
+- [A value for Python code](https://django-partial-dates.fairdm.org/developer/values.html) that sorts, compares, hashes and says
+  which period it covers.
+- [A model field](https://django-partial-dates.fairdm.org/developer/storing.html) that stores the ISO form in one text column,
+  with the database refusing anything else.
+- [Filtering, ordering and grouping](https://django-partial-dates.fairdm.org/developer/querying.html) by year, month, day or
+  range, in the database, knowing which uncertain dates each filter includes.
+- [A form field](https://django-partial-dates.fairdm.org/developer/forms.html) with year, month and day selects, in model forms
+  and the admin with nothing to configure.
+- [Display text](https://django-partial-dates.fairdm.org/developer/showing.html) at the recorded precision, in the reader's
+  language.
+- [Ready-made django-filter filters](https://django-partial-dates.fairdm.org/developer/filtering.html), with the `django-filter`
+  extra.
+- [A Django REST framework field](https://django-partial-dates.fairdm.org/developer/rest-framework.html), with the
+  `djangorestframework` extra.
+- [A migration from django-partial-date](https://django-partial-dates.fairdm.org/developer/moving-from-django-partial-date.html)
+  that converts a column in place and keeps every value.
 
 ## Scope and philosophy
 
@@ -379,11 +103,8 @@ django-partial-date.
 ## Prior art
 
 This package replaces [django-partial-date](https://github.com/ktowen/django_partial_date), which
-has had no release since January 2022. That package stores a partial date as a timestamp with
-the precision held in its seconds. [python-edtf](https://github.com/ixc/python-edtf) implements
-the whole of EDTF and ships a Django field that needs four extra columns on every model for
-filtering and sorting. [ADR 0001](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/adr/0001-store-partial-dates-as-iso-8601-strings.md) records how this package stores a
-partial date and why. [Prior art](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/reference/prior-art.md) compares them.
+has had no release since January 2022. The [prior art page](https://django-partial-dates.fairdm.org/reference/prior-art.html)
+compares the alternatives.
 
 ## Licence
 

@@ -55,7 +55,8 @@ also created with byte-order collation, so a database sort of the column is the 
 
 ## Fixtures, serialisers and model history
 
-There is nothing to configure for these. `dumpdata` and `django.core.serializers` write each value
+There is nothing to configure for these, and [Storing a partial date](storing.md) shows the
+commands. `dumpdata` and `django.core.serializers` write each value
 as its ISO form and an empty value as empty, and `loaddata` and `serializers.deserialize` read them
 back at the same precision. django-reversion stores its versions through the same serialisers, so
 `Version.field_dict`, `Version.revert()` and `Revision.revert()` give back exactly what the version
