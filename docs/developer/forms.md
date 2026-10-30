@@ -296,7 +296,7 @@ of the repository, once the development environment is installed with `uv sync`.
    ```
 
    The `seed` command is safe to run again. It adds a sample at each precision, one in 1850 and
-   one in 0990, and three sign-ins.
+   one in 0990, and four sign-ins.
 
 2. Start the server.
 
@@ -307,10 +307,10 @@ of the repository, once the development environment is installed with `uv sync`.
 3. Open `http://localhost:8033/`. The list links to each sample, to a page that adds one, to a
    page with a form that has no model and shows what it cleaned, and to the admin.
 
-The sign-ins `regular.user`, `staff.user` and `super.user` have the email addresses
-`regular.user@example.com`, `staff.user@example.com` and `super.user@example.com`, and all have the
-password `password`. The staff user can add and change the sample models in the admin. They are for
-use on your own machine, and the project is not set up to be served to anyone else.
+The sign-ins `regular.user`, `staff.user`, `super.user` and `view-only.user` each have the email
+address of their name at `example.com`, and all have the password `password`. The staff user can add
+and change the sample models in the admin, and the view-only user can read them. They are for use on
+your own machine, and the project is not set up to be served to anyone else.
 
 ## Why a required field takes a year alone
 

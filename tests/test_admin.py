@@ -5,11 +5,11 @@ import sys
 import types
 
 import pytest
+from django import forms
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_list import result_headers
-from django import forms
 from django.contrib.auth.models import Permission, User
 from django.test import modify_settings
 from django.urls import path, reverse
@@ -499,6 +499,23 @@ def read_only_texts(response):
 
 
 @pytest.mark.django_db
+class DefaultedReadOnlyRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    readonly_fields = ["defaulted"]
+
+
+class DeclaredFieldForm(forms.ModelForm):
+    other = PartialDateField()
+
+    class Meta:
+        model = Record
+        fields = ["date", "other", "defaulted"]
+
+
+class DeclaredReadOnlyRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    form = DeclaredFieldForm
+    readonly_fields = ["other"]
+
+
 class TestAdminReadOnly:
     @pytest.mark.parametrize(
         "admin_class", [ReadOnlyRecordAdmin, FieldsRecordAdmin, FieldsetsRecordAdmin]
@@ -564,6 +581,31 @@ class TestAdminReadOnly:
 
         empty = site.get_model_admin(Record).get_empty_value_display()
         assert read_only_texts(response) == [empty]
+
+    def test_a_default_given_as_text_shows_the_display_form_on_the_add_page(
+        self, admin_site, serve
+    ):
+        serve((Record, DefaultedReadOnlyRecordAdmin))
+
+        response = admin_site.get(reverse("admin:tests_record_add"))
+
+        assert read_only_texts(response) == [PartialDate(1990).display_form()]
+
+    def test_a_read_only_field_the_form_declares_is_not_asked_for_on_save(
+        self, admin_site, serve
+    ):
+        serve((Record, DeclaredReadOnlyRecordAdmin))
+        record = RecordFactory(date=PartialDate(1990), other=PartialDate(1991, 6))
+
+        response = admin_site.post(
+            reverse("admin:tests_record_change", args=[record.pk]),
+            {**part("date", "1995"), **part("defaulted", "1990")},
+        )
+
+        assert response.status_code == 302
+        record.refresh_from_db()
+        assert record.date == PartialDate(1995)
+        assert record.other == PartialDate(1991, 6)
 
     def test_the_add_page_shows_selects(self, admin_site, serve):
         serve((Record, ReadOnlyRecordAdmin))

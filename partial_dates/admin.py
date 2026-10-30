@@ -53,10 +53,10 @@ class PartialDateDisplayMixin(BaseModelAdmin):
 
             @admin.display(description=field.verbose_name, ordering=field.name)
             def shown(obj: Any) -> str:
-                value = getattr(obj, field.name)
+                value = field.to_python(getattr(obj, field.name))
                 if value is None:
                     return str(self.get_empty_value_display())
-                return str(value.display_form())
+                return value.display_form()
 
             shown.__name__ = field.name
             self.display_columns[field.name] = shown
@@ -213,6 +213,35 @@ class PartialDateDisplayMixin(BaseModelAdmin):
             (title, {**options, "fields": self.substitute(names, options["fields"])})
             for title, options in super().get_fieldsets(request, obj)
         ]
+
+    def get_form(
+        self,
+        request: HttpRequest,
+        obj: Any = None,
+        change: bool = False,
+        **kwargs: Any,
+    ) -> Any:
+        """Leave a read-only field the form declares out of the form.
+
+        Django removes such a field by its name, which a display callable no longer
+        matches, and the form would then ask for a value the page does not offer.
+
+        Args:
+            request: The current request.
+            obj: The object being shown, or `None` on the add page.
+            change: Whether this is the change page.
+            **kwargs: Keyword arguments for the form factory.
+
+        Returns:
+            The form class.
+        """
+        declared = self.read_only_names(request, obj) & set(self.form.declared_fields)
+        if declared:
+            kwargs["form"] = type(
+                self.form.__name__, (self.form,), dict.fromkeys(declared)
+            )
+        parent = cast(Any, super())
+        return parent.get_form(request, obj, change, **kwargs)
 
     def get_formset(self, request: HttpRequest, obj: Any = None, **kwargs: Any) -> Any:
         """Build an inline's formset from the field names alone.

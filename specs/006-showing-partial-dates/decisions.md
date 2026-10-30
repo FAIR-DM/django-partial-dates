@@ -232,3 +232,16 @@ Verdict: changes requested, one high finding. Each was checked by running it.
   test guards rather than proves FR-006 is accepted.
 
 **ADR:** none — corrections to this feature's plan.
+
+## D20 — Two gaps found reading the finished mixin
+
+Reading the diff before accepting the story found two ways the mixin behaved worse than Django, each
+fixed by the orchestrator because each was a line or two with its test already written.
+
+- An unsaved row holds a default given as text, so a read-only field on the add page reached the
+  admin's empty display. The callable now reads through `field.to_python`.
+- `ModelAdmin.get_form` removes a declared form field by its name, which a callable no longer
+  matches, so a read-only field the form declares was still required. The mixin's `get_form` removes
+  it. Django's inline `get_formset` has no such step, so an inline stays as Django leaves it.
+
+**ADR:** none — local to the mixin.
