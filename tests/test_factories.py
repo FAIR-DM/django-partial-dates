@@ -1,7 +1,7 @@
 import pytest
 
-from tests.factories import EventFactory, RecordFactory, SampleFactory
-from tests.models import Event, Record, Sample
+from tests.factories import EventFactory, NoteFactory, RecordFactory, SampleFactory
+from tests.models import Event, Note, Record, Sample
 
 
 @pytest.mark.django_db
@@ -40,3 +40,14 @@ class TestSampleFactory:
 
     def test_the_fixture_wraps_the_factory(self, sample):
         assert Sample.objects.filter(pk=sample.pk).exists()
+
+
+@pytest.mark.django_db
+class TestNoteFactory:
+    def test_it_saves_a_note_on_a_record(self):
+        note = NoteFactory()
+
+        assert Note.objects.filter(pk=note.pk, record=note.record).exists()
+
+    def test_the_fixture_wraps_the_factory(self, note):
+        assert Note.objects.filter(pk=note.pk).exists()

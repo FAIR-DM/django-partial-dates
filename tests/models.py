@@ -2,6 +2,11 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from partial_dates.fields import PartialDateField
+from partial_dates.partial_date import PartialDate
+
+
+def default_reviewed():
+    return PartialDate(2000, 3)
 
 
 class Record(models.Model):
@@ -46,4 +51,24 @@ class Sample(models.Model):
         db_index=True,
         verbose_name=_("collected"),
         help_text=_("When the sample was collected."),
+    )
+
+
+class Note(models.Model):
+    record = models.ForeignKey(Record, on_delete=models.CASCADE)
+    written = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("written"),
+        help_text=_("The day the note was written."),
+    )
+    drafted = PartialDateField(
+        default=PartialDate(1990, 6),
+        verbose_name=_("drafted"),
+        help_text=_("A date that starts as June 1990."),
+    )
+    reviewed = PartialDateField(
+        default=default_reviewed,
+        verbose_name=_("reviewed"),
+        help_text=_("A date that starts as a callable gives it."),
     )

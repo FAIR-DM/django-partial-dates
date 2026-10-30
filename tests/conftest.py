@@ -3,7 +3,7 @@ import re
 import pytest
 from django.db import connection
 
-from tests.factories import EventFactory, RecordFactory, SampleFactory
+from tests.factories import EventFactory, NoteFactory, RecordFactory, SampleFactory
 
 SEEK = re.compile(r"SEARCH .* USING|Index (Only )?Scan")
 WALK = re.compile(r"USING (COVERING )?INDEX|Index (Only )?Scan")
@@ -17,6 +17,11 @@ def record(db):
 @pytest.fixture
 def event(db):
     return EventFactory()
+
+
+@pytest.fixture
+def note(db):
+    return NoteFactory()
 
 
 @pytest.fixture
