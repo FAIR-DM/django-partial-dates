@@ -1,6 +1,7 @@
 import datetime
 import io
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -13,7 +14,7 @@ from django.db.migrations.writer import MigrationWriter
 
 from partial_dates import PartialDate, PartialDateField
 from tests.factories import RecordFactory
-from tests.models import Event, Record
+from tests.models import Event, Record, Sample
 
 
 @pytest.mark.django_db
@@ -482,3 +483,118 @@ class TestFixtures:
             call_command("loaddata", str(path), verbosity=0)
 
         assert not Record.objects.exists()
+
+
+# Each row of the two expected-results tables in the specification: the bound, the row,
+# and what gt, gte, lt and lte give for that row.
+BOUND_RESULTS = [
+    ("1990-06", "1990", {"gt": False, "gte": False, "lt": True, "lte": True}),
+    ("1990-06", "1990-05", {"gt": False, "gte": False, "lt": True, "lte": True}),
+    ("1990-06", "1990-05-31", {"gt": False, "gte": False, "lt": True, "lte": True}),
+    ("1990-06", "1990-06", {"gt": False, "gte": True, "lt": False, "lte": True}),
+    ("1990-06", "1990-06-01", {"gt": True, "gte": True, "lt": False, "lte": False}),
+    ("1990-06", "1990-06-14", {"gt": True, "gte": True, "lt": False, "lte": False}),
+    ("1990-06", "1990-07", {"gt": True, "gte": True, "lt": False, "lte": False}),
+    ("1990-06", "1991", {"gt": True, "gte": True, "lt": False, "lte": False}),
+    ("1990", "1990", {"gte": True, "lte": True}),
+    ("1990", "1990-06", {"gte": True, "lte": False}),
+    ("1990", "1990-06-14", {"gte": True, "lte": False}),
+    ("1990-06-14", "1990", {"gte": False, "lte": True}),
+    ("1990-06-14", "1990-06", {"gte": False, "lte": True}),
+    ("1990-06-14", "1990-06-14", {"gte": True, "lte": True}),
+]
+
+BOUND_CASES = [
+    pytest.param(bound, row, lookup, expected, id=f"{lookup}-{bound}-{row}")
+    for bound, row, results in BOUND_RESULTS
+    for lookup, expected in results.items()
+]
+
+NOT_PARTIAL_DATES = [
+    pytest.param("1990-6", id="text"),
+    pytest.param(datetime.date(1990, 1, 1), id="real-date"),
+    pytest.param(1990, id="integer"),
+]
+
+NAMES_AN_INDEX = re.compile(r"\bindex\b", re.IGNORECASE)
+
+
+@pytest.mark.django_db
+class TestBounds:
+    @pytest.mark.parametrize("form", [PartialDate.fromisoformat, str])
+    @pytest.mark.parametrize(("bound", "row", "lookup", "expected"), BOUND_CASES)
+    def test_a_row_is_compared_with_the_bound_by_the_order_of_the_iso_form(
+        self, grid, found, form, bound, row, lookup, expected
+    ):
+        result = found(Sample.objects.filter(**{f"collected__{lookup}": form(bound)}))
+
+        assert (row in result) is expected
+
+    def test_a_range_mixing_precisions_and_forms_finds_what_gte_and_lte_find(
+        self, grid, found
+    ):
+        low, high = PartialDate(1990, 6), "1990-06-14"
+
+        ranged = found(Sample.objects.filter(collected__range=(low, high)))
+        bounded = found(Sample.objects.filter(collected__gte=low, collected__lte=high))
+
+        assert ranged == bounded == ["1990-06", "1990-06-01", "1990-06-14"]
+
+    def test_a_reversed_range_finds_nothing(self, grid):
+        reversed_range = Sample.objects.filter(collected__range=("1991", "1990"))
+
+        assert not reversed_range.exists()
+
+    def test_in_finds_only_rows_equal_to_a_listed_value(self, grid, found):
+        result = found(
+            Sample.objects.filter(collected__in=[PartialDate(1990), "1990-06-14"])
+        )
+
+        assert result == ["1990", "1990-06-14"]
+
+    @pytest.mark.parametrize("lookup", ["gt", "gte", "lt", "lte"])
+    @pytest.mark.parametrize("bad", NOT_PARTIAL_DATES)
+    def test_a_comparison_refuses_a_bound_that_is_not_a_partial_date(
+        self, django_assert_num_queries, lookup, bad
+    ):
+        with django_assert_num_queries(0), pytest.raises(ValueError):
+            Sample.objects.filter(**{f"collected__{lookup}": bad})
+
+    @pytest.mark.parametrize("bad", NOT_PARTIAL_DATES)
+    @pytest.mark.parametrize("position", [0, 1])
+    def test_a_range_refuses_a_bound_that_is_not_a_partial_date(
+        self, django_assert_num_queries, bad, position
+    ):
+        bounds = ["1990", "1991"]
+        bounds[position] = bad
+
+        with django_assert_num_queries(0), pytest.raises(ValueError):
+            Sample.objects.filter(collected__range=tuple(bounds))
+
+    @pytest.mark.parametrize("bad", NOT_PARTIAL_DATES)
+    def test_in_refuses_a_member_that_is_not_a_partial_date(
+        self, django_assert_num_queries, bad
+    ):
+        with django_assert_num_queries(0), pytest.raises(ValueError):
+            Sample.objects.filter(collected__in=["1990", bad])
+
+    @pytest.mark.parametrize("lookup", ["gt", "gte", "lt", "lte", "exact"])
+    def test_a_row_holding_no_date_is_not_found_by_a_bound(self, grid, found, lookup):
+        result = found(Sample.objects.filter(**{f"collected__{lookup}": "1990-06"}))
+
+        assert None not in result
+
+    def test_exclude_of_a_bound_returns_a_row_holding_no_date(self, grid, found):
+        result = found(Sample.objects.exclude(collected__gte="1990-06"))
+
+        assert result == ["1990", "1990-05", "1990-05-31", None]
+
+
+@pytest.mark.django_db
+class TestRangeIndex:
+    def test_a_lower_and_upper_bound_use_the_index(self, grid, query_plan):
+        plan = query_plan(
+            Sample.objects.filter(collected__gte="1990-06", collected__lte="2000")
+        )
+
+        assert NAMES_AN_INDEX.search(plan)
