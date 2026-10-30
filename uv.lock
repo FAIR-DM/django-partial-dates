@@ -516,6 +516,18 @@ wheels = [
 ]
 
 [[package]]
+name = "django-filter"
+version = "26.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/ee/c0f950fe24f3e0b69d054ad957f9229632b50bdc78e968f966d8b4efe16a/django_filter-26.2.tar.gz", hash = "sha256:fd5cc83995fbe9f5f07fb5dcda16fde0f04de1ecf8ef82628b6c0ec921b751af", size = 144828, upload-time = "2026-10-03T12:01:01.007Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/92/6b098caa5b980a9d13a8db4825b7670410fa572e9195e39648f7700f2a37/django_filter-26.2-py3-none-any.whl", hash = "sha256:df8f737841d6359df00b84dda9b5ab59067fe60292091f1bdae1e3e6281cedb0", size = 94077, upload-time = "2026-10-03T12:00:59.162Z" },
+]
+
+[[package]]
 name = "django-model-info"
 version = "2026.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -538,20 +550,37 @@ dependencies = [
     { name = "django" },
 ]
 
+[package.optional-dependencies]
+django-filter = [
+    { name = "django-filter" },
+]
+djangorestframework = [
+    { name = "djangorestframework" },
+]
+
 [package.dev-dependencies]
 dev = [
+    { name = "django-filter" },
     { name = "django-reversion" },
+    { name = "djangorestframework" },
     { name = "mvp-shared", extra = ["dev", "test"] },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydoclint" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "django", specifier = ">=5.2" }]
+requires-dist = [
+    { name = "django", specifier = ">=5.2" },
+    { name = "django-filter", marker = "extra == 'django-filter'", specifier = ">=26.2" },
+    { name = "djangorestframework", marker = "extra == 'djangorestframework'", specifier = ">=3.18" },
+]
+provides-extras = ["django-filter", "djangorestframework"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "django-filter", specifier = ">=26.2" },
     { name = "django-reversion", specifier = ">=6.5.0" },
+    { name = "djangorestframework", specifier = ">=3.18" },
     { name = "mvp-shared", extras = ["dev", "test"], git = "https://github.com/django-mvp/shared.git?tag=v0.6.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pydoclint", specifier = ">=0.10.1" },
@@ -608,6 +637,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1a/89/51b82766a1c937dea9fb92f0fb7666919d120379fc26dc84ab504e35f37e/django_watchfiles-1.4.0.tar.gz", hash = "sha256:88e253e8e8427834eac467923d334c35010279b3e9ceb5bb91014be83975b11b", size = 8647, upload-time = "2025-09-22T16:34:04.634Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/85/3d31f347e1a3eef9be381792df1994ff25e4db4659ab40a5cc3f814e3a1a/django_watchfiles-1.4.0-py3-none-any.whl", hash = "sha256:40cb3180987c63629b0681ab228b65afd68e0f783388cc72a45620378213bb48", size = 6766, upload-time = "2025-09-22T16:34:03.193Z" },
+]
+
+[[package]]
+name = "djangorestframework"
+version = "3.18.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8d/b2/1cee76b188301f7d03169ca77fab2b3d3ec5d01b3469189f944af2d7f11a/djangorestframework-3.18.3.tar.gz", hash = "sha256:446a9b352e7eff630421ab3f2328bd2401b109a9470afa4a31189994911ed030", size = 923563, upload-time = "2026-10-06T21:33:51.521Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/dd/de5f4543765bec94e036a5e9593a42f8fa7efec8de78eb56b9ca834385f3/djangorestframework-3.18.3-py3-none-any.whl", hash = "sha256:8544bb674846731b1e3c9b309236ee1dc412905a0aa725be2ec193ca950a7d12", size = 903986, upload-time = "2026-10-06T21:33:49.917Z" },
 ]
 
 [[package]]

@@ -156,3 +156,34 @@ Generated schemas see the field as text. FairDM has its own schema code and no n
 to integrate with a generator. Adding one would be a third optional dependency.
 
 **ADR:** none.
+
+## D13 — The first task was done directly
+
+Adding two extras and two lines to the dev group has no design in it, so T001 was not dispatched.
+
+**ADR:** none — a packaging edit that nothing else inherits.
+
+## D14 — The filter refuses lookups it cannot serve
+
+The spec leaves `range` and `in` out of `Meta.fields`. Left alone, django-filter builds a
+comma-separated class from the mapped filter, and `in` then validates and finds nothing, which is a
+quiet wrong answer. `PartialDateFilter` raises `ImproperlyConfigured` when it is built with a lookup
+outside its list, so the mistake shows up when the class is defined.
+
+**ADR:** none — local to one class, and the guide states the list.
+
+## D15 — The extras' lowest versions are the ones the tests run
+
+`django-filter>=26.2` and `djangorestframework>=3.18` name Django 5.2, 6.0 and 6.1 in their metadata.
+An older lower bound would claim support for a pair nobody has run.
+
+**ADR:** none — a packaging choice that a later release can loosen.
+
+## D16 — `PartialDateFilter` takes `years`, and a filter's widget is its own
+
+A filter's selects also have to read the ISO form, so `PartialDateWidget` passed in by hand would
+lose that. `years` on the filter reaches the right widget and states what the developer means. Adding
+the reading to `PartialDateWidget` itself would change a core form for an extra's sake.
+
+**ADR:** none — local to the filter module.
+
