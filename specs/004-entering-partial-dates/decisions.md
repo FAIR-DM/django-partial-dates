@@ -144,3 +144,45 @@ FS-002's assumption that a model form shows the field as plain text until R4, an
 request to read as current, alongside a developer guide page on forms and the admin.
 
 **ADR:** none — documentation that ships with the change.
+
+## D14 — A `MultiWidget` and a `MultiValueField`, rebuilt rather than moved
+
+GOALS.md calls FairDM's `SelectDateWidget` subclass the starting point. Its behaviour is kept and
+its base class is not, because `SelectDateWidget` would need nearly every method replaced and still
+drops the empty choices on a required field (research R1, R2). `MultiWidget` and `MultiValueField`
+are Django's own way to build a value from parts.
+
+**ADR:** none — inside one module, invisible to a developer using it.
+
+## D15 — The form field shares the model field's name, in its own module
+
+`partial_dates.forms.PartialDateField` sits beside `partial_dates.fields.PartialDateField`, as
+`forms.DateField` sits beside `models.DateField`. The package root keeps exporting the model field
+only. `PartialDateFormField`, FairDM's name, would be a second convention for the same relation.
+
+**ADR:** none — follows Django's naming.
+
+## D16 — Years are named on the widget
+
+Naming years is a matter of display, and `PartialDateWidget(years=...)` reaches every route Django
+already has: `Meta.widgets`, `formfield_overrides` and `widget=`. The form field and the model field
+take no new argument (research R3).
+
+**ADR:** none — a local API choice, documented in the guide.
+
+## D17 — The label names the group
+
+US-1 scenario 18 and FR-009 say the field's label leads to the year. Django renders a multi-part
+widget in a `fieldset` with the label as its `legend`, which names the group, and the year is the
+first select a keyboard reaches. A `for` on a `legend` would be invalid and would do nothing, so
+none is added. The requirement is met that way (research R4).
+
+**ADR:** none — follows Django's rendering.
+
+## D18 — Test app additions
+
+`Note`, a test model with a foreign key to `Record`, gives the admin tests an inline, because no
+existing test model has a relation. `django.contrib.admin` and what it needs join the test settings
+and `example/` only.
+
+**ADR:** none — test scaffolding.
