@@ -9,7 +9,9 @@ from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.contrib.admin.sites import AdminSite
 from django.contrib.admin.templatetags.admin_list import result_headers
+from django import forms
 from django.contrib.auth.models import Permission, User
+from django.test import modify_settings
 from django.urls import path, reverse
 from django.utils.html import strip_tags
 
@@ -64,6 +66,23 @@ def staff(db):
 def admin_site(client, staff):
     client.force_login(staff)
     return client
+
+
+@pytest.fixture
+def sign_in(client):
+    """Sign in a staff user who holds only the named permissions on the test app."""
+
+    def sign_in(*codenames):
+        user = User.objects.create_user("limited.user", is_staff=True)
+        user.user_permissions.set(
+            Permission.objects.filter(
+                content_type__app_label="tests", codename__in=codenames
+            )
+        )
+        client.force_login(user)
+        return client
+
+    return sign_in
 
 
 @pytest.fixture
@@ -554,3 +573,185 @@ class TestAdminReadOnly:
         page = response.content.decode()
         for name in ("date_year", "date_month", "date_day"):
             assert f'name="{name}"' in page
+
+
+class ViewedRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    pass
+
+
+class ExcludingRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    exclude = ["other"]
+
+
+class NarrowingRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    fields = ["date"]
+
+
+class DateOnlyForm(forms.ModelForm):
+    class Meta:
+        model = Record
+        fields = ["date"]
+
+
+class FormRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    form = DateOnlyForm
+
+
+class MixedNoteInline(PartialDateDisplayMixin, admin.TabularInline):
+    model = Note
+    extra = 1
+    readonly_fields = ["reviewed"]
+
+
+class InlinedRecordAdmin(admin.ModelAdmin):
+    inlines = [MixedNoteInline]
+
+
+@pytest.fixture
+def dated_record(db):
+    return RecordFactory(
+        date=PartialDate(1990),
+        other=PartialDate(1991, 6, 14),
+        defaulted=PartialDate(1992, 3),
+    )
+
+
+@pytest.fixture
+def noted_record(db):
+    record = RecordFactory()
+    NoteFactory(
+        record=record, drafted=PartialDate(1992, 3), reviewed=PartialDate(1993, 7)
+    )
+    return record
+
+
+@pytest.mark.django_db
+class TestAdminViewOnly:
+    def test_a_view_only_user_reads_every_partial_date_as_the_display_form(
+        self, sign_in, serve, dated_record
+    ):
+        serve((Record, ViewedRecordAdmin))
+        client = sign_in("view_record")
+
+        response = client.get(
+            reverse("admin:tests_record_change", args=[dated_record.pk])
+        )
+
+        assert response.status_code == 200
+        assert read_only_texts(response) == [
+            dated_record.date.display_form(),
+            dated_record.other.display_form(),
+            dated_record.defaulted.display_form(),
+        ]
+        assert "<select" not in response.content.decode()
+
+    @pytest.mark.parametrize(
+        ("admin_class", "left_out"),
+        [
+            (ExcludingRecordAdmin, ["other"]),
+            (NarrowingRecordAdmin, ["other", "defaulted"]),
+            (FormRecordAdmin, ["other", "defaulted"]),
+        ],
+    )
+    def test_a_field_the_admin_leaves_out_stays_off_a_view_only_page(
+        self, sign_in, serve, dated_record, admin_class, left_out
+    ):
+        serve((Record, admin_class))
+        client = sign_in("view_record")
+
+        response = client.get(
+            reverse("admin:tests_record_change", args=[dated_record.pk])
+        )
+
+        page = response.content.decode()
+        assert dated_record.date.display_form() in read_only_texts(response)
+        for name in left_out:
+            assert getattr(dated_record, name).display_form() not in page
+
+    def test_an_inline_shows_the_display_form_on_a_read_only_field(
+        self, admin_site, serve, noted_record
+    ):
+        serve((Record, InlinedRecordAdmin))
+        note = noted_record.note_set.get()
+
+        response = admin_site.get(
+            reverse("admin:tests_record_change", args=[noted_record.pk])
+        )
+
+        assert cells(response, "reviewed")[0] == note.reviewed.display_form()
+        assert 'name="note_set-0-drafted_year"' in response.content.decode()
+
+    def test_an_inline_on_a_view_only_page_shows_the_display_form(
+        self, sign_in, serve, noted_record
+    ):
+        serve((Record, InlinedRecordAdmin))
+        note = noted_record.note_set.get()
+        client = sign_in("view_record", "view_note")
+
+        response = client.get(
+            reverse("admin:tests_record_change", args=[noted_record.pk])
+        )
+
+        assert cells(response, "drafted")[0] == note.drafted.display_form()
+        assert cells(response, "reviewed")[0] == note.reviewed.display_form()
+        assert 'name="note_set-0-drafted_year"' not in response.content.decode()
+
+    def test_an_inline_a_user_may_change_under_a_parent_they_may_view_is_read_only(
+        self, sign_in, serve, noted_record
+    ):
+        serve((Record, InlinedRecordAdmin))
+        note = noted_record.note_set.get()
+        client = sign_in("view_record", "view_note", "change_note")
+
+        response = client.get(
+            reverse("admin:tests_record_change", args=[noted_record.pk])
+        )
+
+        assert cells(response, "drafted")[0] == note.drafted.display_form()
+        assert 'name="note_set-0-drafted_year"' not in response.content.decode()
+
+    def test_an_inline_a_user_may_add_to_keeps_selects_on_its_new_rows(
+        self, admin_site, serve, noted_record
+    ):
+        serve((Record, InlinedRecordAdmin))
+
+        response = admin_site.get(
+            reverse("admin:tests_record_change", args=[noted_record.pk])
+        )
+
+        assert 'name="note_set-1-drafted_year"' in response.content.decode()
+
+    def test_an_inline_a_user_may_add_to_keeps_selects_when_the_parent_is_read_only(
+        self, sign_in, serve, noted_record
+    ):
+        serve((Record, InlinedRecordAdmin))
+        client = sign_in("view_record", "view_note", "add_note")
+
+        response = client.get(
+            reverse("admin:tests_record_change", args=[noted_record.pk])
+        )
+
+        assert 'name="note_set-1-drafted_year"' in response.content.decode()
+
+    def test_a_user_who_may_add_but_not_change_sees_selects_on_the_add_page(
+        self, sign_in, serve
+    ):
+        serve((Record, ViewedRecordAdmin))
+        client = sign_in("add_record", "view_record")
+
+        response = client.get(reverse("admin:tests_record_add"))
+
+        assert 'name="date_year"' in response.content.decode()
+
+    def test_the_display_works_with_the_app_entry_removed(
+        self, sign_in, serve, dated_record
+    ):
+        serve((Record, ViewedRecordAdmin))
+        client = sign_in("view_record")
+
+        with modify_settings(INSTALLED_APPS={"remove": "partial_dates"}):
+            response = client.get(
+                reverse("admin:tests_record_change", args=[dated_record.pk])
+            )
+
+        assert dated_record.date.display_form() in read_only_texts(response)

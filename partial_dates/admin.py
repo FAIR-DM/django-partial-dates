@@ -5,7 +5,8 @@ from functools import cached_property
 from typing import Any, cast
 
 from django.contrib import admin
-from django.contrib.admin.options import BaseModelAdmin
+from django.contrib.admin.options import BaseModelAdmin, InlineModelAdmin
+from django.contrib.admin.utils import flatten_fieldsets
 from django.http import HttpRequest
 
 from partial_dates.fields import PartialDateField
@@ -121,6 +122,31 @@ class PartialDateDisplayMixin(BaseModelAdmin):
             return None
         return self.substitute(self.listed_names(), links)
 
+    def whole_object_read_only(self, request: HttpRequest, obj: Any = None) -> bool:
+        """Say whether the user can only read this object.
+
+        An inline is read-only for a user who may not add to it and may not change
+        both the parent and the inline. The parent is asked through the admin site.
+
+        Args:
+            request: The current request.
+            obj: The object being shown, or `None` on the add page.
+
+        Returns:
+            `True` when every partial date field on the page is read-only.
+        """
+        if obj is None:
+            return False
+        if not isinstance(self, InlineModelAdmin):
+            return not self.has_change_permission(request, obj)
+        if self.has_add_permission(request, obj):
+            return False
+        parent = self.admin_site.get_model_admin(self.parent_model)
+        return not (
+            parent.has_change_permission(request, obj)
+            and self.has_change_permission(request, obj)
+        )
+
     def read_only_names(self, request: HttpRequest, obj: Any = None) -> set[str]:
         """Name the partial date fields that are read-only for this request.
 
@@ -129,8 +155,11 @@ class PartialDateDisplayMixin(BaseModelAdmin):
             obj: The object being shown, or `None` on the add page.
 
         Returns:
-            The names in the admin's own `readonly_fields`.
+            Every partial date field when the whole object is read-only, and
+            otherwise the names in the admin's own `readonly_fields`.
         """
+        if self.whole_object_read_only(request, obj):
+            return set(self.partial_fields())
         return {
             name
             for name in super().get_readonly_fields(request, obj)
@@ -184,3 +213,26 @@ class PartialDateDisplayMixin(BaseModelAdmin):
             (title, {**options, "fields": self.substitute(names, options["fields"])})
             for title, options in super().get_fieldsets(request, obj)
         ]
+
+    def get_formset(self, request: HttpRequest, obj: Any = None, **kwargs: Any) -> Any:
+        """Build an inline's formset from the field names alone.
+
+        Django leaves a callable out of a form on a change page, but an inline's
+        formset does not, so only the names that are strings are passed on.
+
+        Args:
+            request: The current request.
+            obj: The parent object being shown, or `None` on the add page.
+            **kwargs: Keyword arguments for the formset factory.
+
+        Returns:
+            The formset class.
+        """
+        if "fields" not in kwargs:
+            kwargs["fields"] = [
+                name
+                for name in flatten_fieldsets(self.get_fieldsets(request, obj))
+                if isinstance(name, str)
+            ]
+        parent = cast(Any, super())
+        return parent.get_formset(request, obj, **kwargs)
