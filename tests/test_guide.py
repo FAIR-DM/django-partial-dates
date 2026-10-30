@@ -1,6 +1,7 @@
 import ast
 import doctest
 import re
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -8,9 +9,17 @@ import pytest
 from partial_dates import PartialDate
 from tests.models import Sample
 
-GUIDE = Path(__file__).parent.parent / "docs" / "developer" / "querying.md"
+ROOT = Path(__file__).parent.parent
+GUIDE = ROOT / "docs" / "developer" / "querying.md"
+MOVING_GUIDE = ROOT / "docs" / "developer" / "moving-from-django-partial-date.md"
 FENCED_PYTHON = re.compile(r"^```python\n(.*?)^```", re.DOTALL | re.MULTILINE)
 LISTED_ROWS = re.compile(r"^for text in (\[.*?\]):$", re.DOTALL | re.MULTILINE)
+GUIDE_BLOCK = re.compile(
+    r"^(?P<indent> *)```python(?P<info>[^\n]*)\n(?P<code>.*?)^(?P=indent)```",
+    re.DOTALL | re.MULTILINE,
+)
+FILE_NAME = re.compile(r'title="(?P<path>[^"]+)"')
+BEFORE_STATE = "before-state"
 NO_DATE = "no date"
 
 
@@ -108,3 +117,36 @@ class TestStatedResults:
         ]
 
         assert (text in found) is stated
+
+
+def moving_blocks():
+    return [
+        (match["info"].strip(), textwrap.dedent(match["code"]))
+        for match in GUIDE_BLOCK.finditer(MOVING_GUIDE.read_text())
+    ]
+
+
+class TestMovingGuide:
+    def test_every_end_state_block_equals_the_file_it_names(self):
+        named = [
+            (FILE_NAME.search(info)["path"], code)
+            for info, code in moving_blocks()
+            if FILE_NAME.search(info)
+        ]
+
+        assert "tests/moving/migrations/0004_convert_dates.py" in [
+            path for path, _ in named
+        ]
+        for path, code in named:
+            assert code == (ROOT / path).read_text(), path
+
+    def test_every_other_block_runs_unless_it_shows_the_state_before_the_move(self):
+        runnable = [
+            code
+            for info, code in moving_blocks()
+            if not FILE_NAME.search(info) and info != BEFORE_STATE
+        ]
+
+        assert runnable
+        for code in runnable:
+            exec(compile(code, str(MOVING_GUIDE), "exec"), {})  # noqa: S102
