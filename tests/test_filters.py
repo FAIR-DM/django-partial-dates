@@ -1,8 +1,17 @@
 import datetime
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 import django_filters
 import pytest
 from django.core.exceptions import ImproperlyConfigured
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import serializers
+from rest_framework.generics import ListAPIView
+from rest_framework.renderers import JSONRenderer
+from rest_framework.test import APIRequestFactory
 
 from partial_dates.fields import PartialDateField
 from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
@@ -10,6 +19,7 @@ from partial_dates.partial_date import PartialDate
 from tests.factories import NoteFactory, RecordFactory, SampleFactory
 from tests.models import Record, Sample
 
+TEXTS_IN_JUNE = ["1990-06", "1990-06-01", "1990-06-14"]
 LOOKUPS = ["exact", "gt", "gte", "lt", "lte"]
 BOUNDS = ["1990", "1990-06", "1990-06-14"]
 
@@ -631,3 +641,107 @@ class TestAcrossARelation:
         found = across(data, exclude=True)
 
         assert named(found) == ["after", "before", "before and after", "no note"]
+
+
+class SampleSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    collected = serializers.CharField(allow_null=True)
+
+
+class SampleFilter(django_filters.FilterSet):
+    collected = PartialDateFilter()
+    when = PartialDateRangeFilter(field_name="collected")
+
+    class Meta:
+        model = Sample
+        fields = []
+
+
+class SampleList(ListAPIView):
+    queryset = Sample.objects.order_by("pk")
+    serializer_class = SampleSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = SampleFilter
+    authentication_classes = []
+    permission_classes = []
+    renderer_classes = [JSONRenderer]
+
+
+class TestFilterBackend:
+    @pytest.fixture
+    def get(self):
+        def request(**query):
+            response = SampleList.as_view()(APIRequestFactory().get("/", query))
+            response.render()
+            return response
+
+        return request
+
+    @pytest.mark.parametrize(
+        "text", ["1990-6", "1990-02-30", " 1990", "9" * 200, "1990\x00"]
+    )
+    @pytest.mark.parametrize("name", ["collected", "when_after", "when_before"])
+    def test_text_that_is_not_a_partial_date_gives_a_400_naming_the_filter(
+        self, grid, get, name, text
+    ):
+        response = get(**{name: text})
+
+        assert response.status_code == 400
+        assert response.data[name.split("_")[0]][0].code == "invalid"
+
+    @pytest.mark.parametrize(
+        ("query", "expected"),
+        [
+            ({"collected": "1990-06"}, ["1990-06"]),
+            ({"collected": "1990"}, ["1990"]),
+            ({"when_after": "1990-06", "when_before": "1990-06"}, TEXTS_IN_JUNE),
+        ],
+    )
+    def test_an_iso_form_gives_the_filtered_list(self, grid, get, query, expected):
+        response = get(**query)
+
+        assert response.status_code == 200
+        assert [row["collected"] for row in response.data] == expected
+
+
+SOURCE = """
+import sys
+
+sys.modules["rest_framework"] = None
+import django
+
+django.setup()
+import django_filters
+
+from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
+from tests.models import Sample
+
+
+class SampleFilter(django_filters.FilterSet):
+    collected = PartialDateFilter()
+    when = PartialDateRangeFilter(field_name="collected")
+
+    class Meta:
+        model = Sample
+        fields = []
+
+
+assert "collected" in SampleFilter.base_filters
+"""
+
+
+class TestWithoutRestFramework:
+    def test_a_fresh_interpreter_with_it_blocked_builds_a_filter_set(self):
+        env = {**os.environ, "DJANGO_SETTINGS_MODULE": "tests.settings"}
+        root = Path(__file__).parent.parent
+
+        result = subprocess.run(
+            [sys.executable, "-c", SOURCE],
+            env=env,
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0, result.stderr
