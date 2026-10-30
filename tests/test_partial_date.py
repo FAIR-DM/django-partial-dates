@@ -3,11 +3,22 @@
 import calendar
 import dataclasses
 import datetime
+import io
+import json
 import operator
 
 import pytest
+from django.conf import settings
+from django.core.management import call_command
+from django.db import connection
+from django.template import engines
+from django.test import override_settings
+from django.utils import translation
+from django.utils.formats import date_format, number_format, reset_format_cache
 
 from partial_dates import PartialDate, Precision, Relation
+from tests.factories import RecordFactory
+from tests.models import Record
 
 
 class TestReadingTheIsoForm:
@@ -406,3 +417,176 @@ class TestBuilding:
             setattr(value, part, 1991)
 
         assert value == PartialDate(1990, 6, 14)
+
+
+class TestDisplayForm:
+    @pytest.mark.parametrize(
+        ("language", "year", "month", "day"),
+        [
+            ("en", "1990", "June 1990", "June 14, 1990"),
+            ("de", "1990", "Juni 1990", "14. Juni 1990"),
+            ("ja", "1990", "1990年6月", "1990年6月14日"),
+        ],
+    )
+    def test_each_precision_reads_in_the_active_language(
+        self, language, year, month, day
+    ):
+        with translation.override(language):
+            assert PartialDate(1990).display_form() == year
+            assert PartialDate(1990, 6).display_form() == month
+            assert PartialDate(1990, 6, 14).display_form() == day
+
+    def test_one_value_reads_in_the_language_active_when_it_is_shown(self):
+        value = PartialDate(1990, 6, 14)
+
+        with translation.override("en"):
+            english = value.display_form()
+        with translation.override("de"):
+            german = value.display_form()
+
+        assert english != german
+        with translation.override("en"):
+            assert value.display_form() == english
+
+    @override_settings(
+        USE_THOUSAND_SEPARATOR=True, THOUSAND_SEPARATOR=",", NUMBER_GROUPING=3
+    )
+    @pytest.mark.parametrize("value", [PartialDate(1990), PartialDate(1990, 6)])
+    def test_the_year_carries_no_thousands_separator(self, value):
+        with translation.override("en"):
+            assert number_format(1990) == "1,990"
+            assert "1990" in value.display_form()
+
+    @override_settings(
+        USE_THOUSAND_SEPARATOR=True, THOUSAND_SEPARATOR=",", NUMBER_GROUPING=3
+    )
+    def test_a_full_date_carries_no_thousands_separator(self):
+        with translation.override("en"):
+            assert "1990" in PartialDate(1990, 6, 14).display_form()
+
+    @pytest.mark.parametrize("language", ["en", "de", "ja"])
+    def test_a_year_below_a_thousand_reads_the_same_at_every_precision(self, language):
+        with translation.override(language):
+            texts = [
+                PartialDate(990, month, day).display_form()
+                for month, day in [(None, None), (6, None), (6, 14)]
+            ]
+            year = PartialDate(990).display_form()
+
+        assert year == "0990"
+        assert all(year in text for text in texts)
+
+    @pytest.mark.parametrize(
+        "value", [PartialDate(1990), PartialDate(1990, 1), PartialDate(1990, 1, 1)]
+    )
+    def test_a_time_zone_far_from_utc_changes_nothing(self, value):
+        with translation.override("en"):
+            expected = value.display_form()
+            with override_settings(TIME_ZONE="Pacific/Kiritimati"):
+                assert value.display_form() == expected
+            with override_settings(TIME_ZONE="Pacific/Pago_Pago"):
+                assert value.display_form() == expected
+
+    @override_settings(USE_I18N=False, LANGUAGE_CODE="de")
+    def test_a_site_without_translation_reads_in_its_language_code(self):
+        assert PartialDate(1990, 6, 14).display_form() == "14. Juni 1990"
+        assert PartialDate(1990, 6).display_form() == "Juni 1990"
+
+    @pytest.mark.parametrize(
+        ("value", "name"),
+        [
+            (PartialDate(1990, 6), "YEAR_MONTH_FORMAT"),
+            (PartialDate(1990, 6, 14), "DATE_FORMAT"),
+        ],
+    )
+    def test_a_language_without_formats_reads_as_django_writes_it(self, value, name):
+        with translation.override("xx"):
+            assert value.display_form() == date_format(value.start, name)
+
+    @pytest.mark.parametrize(
+        "value", [PartialDate(1990), PartialDate(1990, 6), PartialDate(1990, 6, 14)]
+    )
+    @pytest.mark.parametrize("language", ["en", "de", "ja"])
+    def test_it_equals_what_the_filter_renders_with_no_request(self, language, value):
+        template = engines["django"].from_string(
+            "{% load partial_dates %}{{ value|partial_date }}"
+        )
+
+        with translation.override(language):
+            rendered = template.render({"value": value})
+
+            assert value.display_form() == rendered
+
+    @pytest.fixture
+    def project_formats(self):
+        reset_format_cache()
+        with override_settings(FORMAT_MODULE_PATH=["tests.formats"]):
+            yield
+        reset_format_cache()
+
+    def test_a_project_format_module_sets_the_month_and_the_day_format(
+        self, project_formats
+    ):
+        with translation.override("en"):
+            assert PartialDate(1990, 6).display_form() == "1990/06"
+            assert PartialDate(1990, 6, 14).display_form() == "<14>/06/1990"
+
+
+class TestDisplayFormNamesOnlyRecordedParts:
+    @pytest.mark.parametrize("language", [code for code, _ in settings.LANGUAGES])
+    def test_a_year_reads_the_same_on_its_first_and_its_last_day(self, language):
+        with translation.override(language):
+            text = PartialDate(1990).display_form()
+
+            assert text == date_format(datetime.date(1990, 1, 1), "Y")
+            assert text == date_format(datetime.date(1990, 12, 31), "Y")
+
+    @pytest.mark.parametrize("language", [code for code, _ in settings.LANGUAGES])
+    def test_a_month_reads_the_same_on_its_first_and_its_last_day(self, language):
+        with translation.override(language):
+            text = PartialDate(1990, 6).display_form()
+
+            assert text == date_format(datetime.date(1990, 6, 1), "YEAR_MONTH_FORMAT")
+            assert text == date_format(datetime.date(1990, 6, 30), "YEAR_MONTH_FORMAT")
+
+
+class TestISOFormStays:
+    @pytest.mark.parametrize("language", ["de", "ja"])
+    @pytest.mark.parametrize(
+        ("value", "text"),
+        [
+            (PartialDate(1990), "1990"),
+            (PartialDate(1990, 6), "1990-06"),
+            (PartialDate(1990, 6, 14), "1990-06-14"),
+        ],
+    )
+    def test_str_isoformat_and_a_bare_template_variable_give_the_iso_form(
+        self, language, value, text
+    ):
+        template = engines["django"].from_string("{{ value }}")
+
+        with translation.override(language):
+            assert str(value) == text
+            assert value.isoformat() == text
+            assert template.render({"value": value}) == text
+
+    @pytest.mark.django_db
+    def test_what_is_stored_and_dumped_does_not_depend_on_the_language(self):
+        def stored_and_dumped():
+            out = io.StringIO()
+            call_command("dumpdata", "tests.Record", stdout=out)
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT date FROM tests_record")
+                return cursor.fetchall(), out.getvalue()
+
+        RecordFactory(date="1990-06")
+        with translation.override("en"):
+            english = stored_and_dumped()
+        with translation.override("de"):
+            record = Record.objects.get()
+            record.save()
+            german = stored_and_dumped()
+
+        assert german == english
+        assert english[0] == [("1990-06",)]
+        assert json.loads(english[1])[0]["fields"]["date"] == "1990-06"
