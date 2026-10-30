@@ -175,3 +175,36 @@ Rewritten in the feature's pull request to read as current:
   port 8033. That is a task of User Story 2, not a story of its own.
 
 **ADR:** none — documentation that ships with the change.
+
+## D15 — Names: `display_form`, `partial_date`, `PartialDateDisplayMixin`
+
+`PartialDate.display_form()` sits beside `isoformat()` and names the term in `CONTEXT.md`. The
+filter reads as `{{ value|partial_date }}`, as `date` does for a date, and the library loads as
+`{% load partial_dates %}`, the package's name. Article X puts the behaviour on the value, so a
+free function like FairDM's `format_partial_date()` would be a second way in.
+
+**ADR:** none — local API naming, documented in the guide.
+
+## D16 — One mixin for a `ModelAdmin` and an inline
+
+The specification asks for one declaration on either. They differ in one line, whether a user who
+may add keeps an editable row, so a single class checks `InlineModelAdmin` rather than two classes
+and a base.
+
+**ADR:** none — local to one module.
+
+## D17 — The three admin cases left untried are proved
+
+Saving through such an admin, `list_editable` and the row link were run before planning and hold on
+Django 5.2.18 and 6.1.2. `research.md` has the table and what the shape depends on.
+
+**ADR:** none — evidence for the plan.
+
+## D18 — A user who may view a row and change its inline keeps the ISO form there
+
+When the parent is read-only, Django turns an inline's permissions off in `get_inline_formsets`
+while the inline itself still reports that it may be changed, so the mixin treats its rows as
+editable and the name stays. The text is the ISO form, which invents nothing, and the case needs a
+permission set nobody has asked for.
+
+**ADR:** none — a narrow edge left as Django gives it.
