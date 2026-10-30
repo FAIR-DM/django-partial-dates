@@ -44,5 +44,13 @@ not a date in one of the three forms, whichever program writes it. On PostgreSQL
 also created with byte-order collation, so a database sort of the column is the same sort as
 `sorted()` on the values.
 
+## Fixtures, serialisers and model history
+
+There is nothing to configure for these. `dumpdata` and `django.core.serializers` write each value
+as its ISO form and an empty value as empty, and `loaddata` and `serializers.deserialize` read them
+back at the same precision. django-reversion stores its versions through the same serialisers, so
+`Version.field_dict`, `Version.revert()` and `Revision.revert()` give back exactly what the version
+recorded, empty values included.
+
 You now have a model whose `collected` field takes a `PartialDate` or its ISO text, and gives back
 a `PartialDate`. Next, [filter the dates in the database](querying.md).
