@@ -137,3 +137,9 @@ asserts wording or layout. No name starts with an underscore. Lines are at most 
 | SC-004 | T002, T003, T005, T007, T012 |
 | SC-005 | T013 |
 | SC-006 | T008 |
+
+## Review fixes
+
+- [x] T015 [US3] An object holding `""` reads as no date
+- [x] T016 [US1] `years` documented as belonging to the date lookups, and `plan.md` formatted
+- [x] T017 [US1] Shared test setup moved to `tests/conftest.py`, and helper docstrings removed
