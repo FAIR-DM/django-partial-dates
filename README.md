@@ -26,8 +26,8 @@ the invented date from a recorded one.
 ## Status
 
 Pre-alpha. The package holds a partial date value and a model field that stores it, and the
-field filters by year, month, day and range in the database. Ordering and grouping helpers, and
-form handling, are not written yet.
+field filters, orders, selects and groups by year, month, day and range in the database. Form
+handling is not written yet.
 
 ## Usage
 
@@ -208,16 +208,22 @@ A fixture holding text that is not a partial date, such as `1990-6`, is refused 
 ## Querying
 
 The field filters in the database by the year, month and day of a date, and by a range whose
-bounds are partial dates. A date that might or might not match a filter has one defined result.
+bounds are partial dates. It orders by the date, selects and counts by each part, and gives each
+date as a real date for a chart axis. A date that might or might not match a filter has one
+defined result.
 
 ```python
 Sample.objects.filter(collected__month=6)  # 1990-06 and 1990-06-14, but not 1990
 Sample.objects.filter(collected__gte="1990-06", collected__lt="1991")
+Sample.objects.order_by(F("collected").asc(nulls_last=True))
+Sample.objects.values_list("collected__year").annotate(total=Count("pk"))
+Sample.objects.values_list("collected__start")  # 1990 is date(1990, 1, 1)
 ```
 
 The [querying guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/querying.md)
-says which uncertain dates each filter includes, and gives recipes for June of any year and for
-the other rules a range can follow.
+says which uncertain dates each filter includes, and gives recipes for June of any year, a date
+axis, a drilldown from year to day, and the other rules a range can follow. It also says where
+each database sorts a row holding no date, and how to choose.
 
 ## Scope and philosophy
 

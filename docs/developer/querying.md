@@ -1,9 +1,10 @@
 # Querying
 
-You filter a partial date field in the database with its year, month and day, and with ranges
-whose bounds are partial dates. A partial date is uncertain, so a filter can meet a date that
-might or might not be what you asked for. This page says which dates each filter includes, so you
-can check a query before you rely on it, and it gives recipes for the other rules.
+You filter, order, select and group a partial date field in the database with its year, month
+and day, and with ranges whose bounds are partial dates. A partial date is uncertain, so a
+filter can meet a date that might or might not be what you asked for. This page says which dates
+each filter includes, so you can check a query before you rely on it, and it gives recipes for
+the other rules, including a date axis and a drilldown.
 
 ## Set up the examples
 
@@ -294,6 +295,183 @@ them with `month__isnull`.
 ['1990', '1990-06', '1990-06-01', '1990-06-14', '1991', '1991-06', '1991-06-02', None]
 ```
 
+## Order by the date
+
+Order by the field and the dates come in the order `sorted()` gives them: a year, then the months
+in it, and each month before its days. Put a minus in front for the reverse.
+
+```python
+>>> def listed(queryset):
+...     return [
+...         None if sample.collected is None else str(sample.collected)
+...         for sample in queryset
+...     ]
+>>> in_1991 = Sample.objects.filter(collected__year=1991)
+>>> listed(in_1991.order_by("collected"))
+['1991', '1991-03', '1991-03-15', '1991-04', '1991-06', '1991-06-02']
+>>> listed(in_1991.order_by("-collected"))
+['1991-06-02', '1991-06', '1991-04', '1991-03-15', '1991-03', '1991']
+```
+
+Ordering by the field uses the index on the column, on both databases.
+
+### Say where a row holding no date goes
+
+A sample holding no date has `NULL` in the column, and PostgreSQL and SQLite sort `NULL` in
+opposite places. SQLite puts it first when ascending. PostgreSQL puts it last. A query that
+meets such a row gives different results on the two databases, unless it names `nulls_first` or
+`nulls_last`. Every example below that can meet one names it.
+
+```python
+>>> listed(Sample.objects.order_by(F("collected").asc(nulls_first=True)))[:3]
+[None, '1990', '1990-05']
+>>> listed(Sample.objects.order_by(F("collected").asc(nulls_last=True)))[-3:]
+['1991-06', '1991-06-02', None]
+>>> listed(Sample.objects.order_by(F("collected").desc(nulls_last=True)))[-3:]
+['1990-05', '1990', None]
+```
+
+### Say where a date with an unknown part goes
+
+Ordering by `year`, `month` or `day` is ordering by a number. A date whose part is unknown has
+no number, so it is empty in the same way as a row holding no date, and it sorts where each
+database sorts `NULL`. Name `nulls_first` or `nulls_last` here too.
+
+```python
+>>> listed(
+...     Sample.objects.filter(collected__year=1991).order_by(
+...         F("collected__month").asc(nulls_last=True), "collected"
+...     )
+... )
+['1991-03', '1991-03-15', '1991-04', '1991-06', '1991-06-02', '1991']
+```
+
+## Count by year, month and day
+
+Select a part with `values_list` and count each value with `annotate`. A date appears under the
+part it has and under `None` for a part it lacks, so a year-only date is counted in its year and
+in no month.
+
+```python
+>>> from django.db.models import Count
+>>> list(
+...     Sample.objects.values_list("collected__year")
+...     .annotate(total=Count("pk"))
+...     .order_by(F("collected__year").asc(nulls_last=True))
+... )
+[(1990, 8), (1991, 6), (None, 1)]
+>>> list(
+...     Sample.objects.filter(collected__year=1991)
+...     .values_list("collected__month")
+...     .annotate(total=Count("pk"))
+...     .order_by(F("collected__month").asc(nulls_last=True))
+... )
+[(3, 2), (4, 1), (6, 2), (None, 1)]
+>>> list(
+...     Sample.objects.filter(collected__year=1990, collected__month=6)
+...     .values_list("collected__day")
+...     .annotate(total=Count("pk"))
+...     .order_by(F("collected__day").asc(nulls_last=True))
+... )
+[(1, 1), (14, 1), (None, 1)]
+```
+
+The last group holds `1990-06`, which is in June of 1990 and has no day. Filter on
+`day__isnull=False` to count only the dates recorded to the day.
+
+## Put dates on a date axis
+
+A chart axis needs real dates. `start` gives each partial date as the `datetime.date` its period
+starts on: `1990` is 1 January 1990, `1990-06` is 1 June 1990, and `1990-06-14` is itself.
+
+```python
+>>> [
+...     (day.isoformat(), total)
+...     for day, total in Sample.objects.filter(collected__year=1991)
+...     .values_list("collected__start")
+...     .annotate(total=Count("pk"))
+...     .order_by("collected__start")
+... ]
+[('1991-01-01', 1), ('1991-03-01', 1), ('1991-03-15', 1), ('1991-04-01', 1),
+ ('1991-06-01', 1), ('1991-06-02', 1)]
+```
+
+A year-only date sits on 1 January of its year. That is the first day of its period and not a
+claim that anything happened that day. To leave the year-only dates off a month axis, keep only
+the dates with a month, and to leave off the month-only dates too, keep only the dates with a
+day.
+
+```python
+>>> [
+...     (day.isoformat(), total)
+...     for day, total in Sample.objects.filter(collected__month__isnull=False)
+...     .values_list("collected__start")
+...     .annotate(total=Count("pk"))
+...     .order_by("collected__start")
+... ][:3]
+[('1990-05-01', 1), ('1990-05-31', 1), ('1990-06-01', 2)]
+>>> [
+...     (day.isoformat(), total)
+...     for day, total in Sample.objects.filter(collected__day__isnull=False)
+...     .values_list("collected__start")
+...     .annotate(total=Count("pk"))
+...     .order_by("collected__start")
+... ]
+[('1990-05-31', 1), ('1990-06-01', 1), ('1990-06-14', 1), ('1991-03-15', 1),
+ ('1991-06-02', 1)]
+```
+
+`1990-06` and `1990-06-01` share a start, so the first query counts them together. They stay
+different values: `start` is for placing a date on an axis, and the field still tells them
+apart.
+
+`start` compares with real dates, so a window on the axis is an ordinary filter.
+
+```python
+>>> import datetime
+>>> show(
+...     Sample.objects.filter(
+...         collected__start__gte=datetime.date(1990, 6, 1),
+...         collected__start__lt=datetime.date(1990, 7, 1),
+...     )
+... )
+['1990-06', '1990-06-01', '1990-06-14']
+```
+
+Order by `start` with the field as the second key, so dates that share a start have a fixed order.
+
+```python
+>>> listed(
+...     Sample.objects.filter(collected__start=datetime.date(1990, 6, 1)).order_by(
+...         "collected__start", "collected"
+...     )
+... )
+['1990-06', '1990-06-01']
+```
+
+## Drill down from a year to a day
+
+A drilldown counts by year, then by the months of the year the reader picks, then by the days of
+the month they pick. Each step is the count above with the earlier choices as filters.
+
+1. Count by year with `values_list("collected__year")`.
+2. Filter on the chosen year and count by `collected__month`.
+3. Filter on the chosen year and month and count by `collected__day`.
+
+Each step has a `None` group for the dates that stop at the level above. Show it as "month
+unknown" or "day unknown", or drop it with `month__isnull=False` or `day__isnull=False`.
+
+## What each precision gives
+
+The table shows what each part gives for a date at each precision.
+
+| Date | `year` | `month` | `day` | `start` |
+|---|---|---|---|---|
+| `1990` | 1990 | none | none | 1990-01-01 |
+| `1990-06` | 1990 | 6 | none | 1990-06-01 |
+| `1990-06-14` | 1990 | 6 | 14 | 1990-06-14 |
+| no date | none | none | none | none |
+
 ## Why a bound is a position in the sort order
 
 A filter compares text, and partial dates are uncertain, so some matches are uncertain too. This
@@ -309,10 +487,27 @@ Django gives every text-based field lookups such as `contains`, `startswith` and
 stay as Django gives them and read the stored text. This page does not cover them. Use the
 filters above to ask about a year, a month, a day or a range.
 
+## Why a year sits on 1 January on a date axis
+
+A chart axis holds real dates and a partial date is not one. `start` has to put a year somewhere,
+and the first day of its period is the one place that is always inside it and never later than
+anything the date could mean. It is a position on the axis, not a record of when the thing
+happened. `end` is not offered, because a period's last day is no more a claim than its first,
+and a date axis needs one end of the period.
+
+## Why empty values sort where the database puts them
+
+The package stores `NULL` for a row holding no date, and `year`, `month`, `day` and `start` give
+`NULL` for a part that is not recorded. Which end of a sort `NULL` takes is the database's
+decision: SQLite first, PostgreSQL last when ascending. The package does not override it, so
+that ordering by a partial date behaves like ordering by any other nullable column in your
+project. The cost is that you name `nulls_first` or `nulls_last` wherever the result must be the
+same on both.
+
 ## Which queries use an index
 
-When the column has an index, a range filter such as `gte` with `lte`, and a filter on one year
-with `year=1990`, use it on PostgreSQL and SQLite. Filters on `month` and `day`, and comparisons
+When the column has an index, a range filter such as `gte` with `lte`, a filter on one year
+with `year=1990`, and ordering by the field itself use it on PostgreSQL and SQLite. Filters on `month` and `day`, and comparisons
 of `year` other than equality, read the whole table. "June of any year" is the usual example.
 Whether a column has an index stays your decision.
 

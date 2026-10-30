@@ -9,6 +9,8 @@ holds a part nobody gave.
 - [Store a partial date](developer/index.md) in one text column, as its ISO form.
 - [Filter partial dates](developer/querying.md) by year, month, day or a range, in the database,
   knowing which uncertain dates each filter includes.
+- [Order, select and group partial dates](developer/querying.md#order-by-the-date) by the date
+  or by one of its parts, and put them on a date axis with `start`.
 
 ## Requirements
 

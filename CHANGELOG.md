@@ -26,9 +26,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   They combine with `gt`, `gte`, `lt`, `lte`, `in`, `range` and `isnull`, and a filter on one
   year uses an index on the column. Range filters take a `PartialDate` or its ISO form as a
   bound and compare by the order of the ISO form.
+- Ordering by a `PartialDateField` gives the order `sorted()` gives its values, and uses an index
+  on the column. `year`, `month` and `day` work in `values`, `values_list`, `annotate`,
+  `order_by` and grouping, and give whole numbers, or `None` for a part not recorded.
+- A `start` transform on `PartialDateField`, giving the first day of a date's period as a
+  `datetime.date`, for a date axis. It works in `values`, `values_list`, `annotate`, `order_by`,
+  grouping and comparison with real dates.
 - The developer guide: installation, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a
-  range, leaving every one out, and taking in the whole of a month or year.
+  range, leaving every one out, and taking in the whole of a month or year. It also covers
+  ordering, counting by year, month and day, a date axis, a drilldown, and where each database
+  sorts a row holding no date.
 - Continuous integration runs the whole test suite on PostgreSQL 17, on Django 5.2 and 6.1,
   alongside the SQLite matrix.
 - The package skeleton: packaging, continuous integration and the release flow.
