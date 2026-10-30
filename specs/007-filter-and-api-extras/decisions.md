@@ -187,3 +187,12 @@ the reading to `PartialDateWidget` itself would change a core form for an extra'
 
 **ADR:** none — local to the filter module.
 
+## D17 — The non-whole-number rule covers this package's filters
+
+The design review showed that `Meta.fields` naming `year`, `month` or `day` gives django-filter's own
+`NumberFilter`, which rounds `1990.5`, as D6 already accepted. FR-008 and US-1 scenario 7 now say
+which filters they cover, and the guide states the difference. No behaviour changes from what D6
+recorded.
+
+**ADR:** none — a precision of wording in the specification, and D6 already settles the behaviour.
+

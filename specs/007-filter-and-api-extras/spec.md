@@ -83,8 +83,8 @@ at each precision, on both databases, comparing the rows found with the tables i
 6. **Given** `PartialDateFilter(lookup_expr="year")`, and the same with `month` and `day`, **When**
    it is given a whole number, **Then** it finds the rows that lookup finds, so `month=6` leaves out
    `1990`, and a number no date can hold finds nothing.
-7. **Given** a year, month or day filter, **When** it is given something that is not a whole number,
-   such as `1990.5` or `June`, **Then** the filter reports an error and is not rounded or ignored.
+7. **Given** the same filter, **When** it is given something that is not a whole number, such as
+   `1990.5` or `June`, **Then** the filter reports an error and is not rounded or ignored.
 8. **Given** a `FilterSet` that maps `PartialDateField` to `PartialDateFilter` through
    `Meta.filter_overrides`, **When** `Meta.fields` names the field with any of `exact`, `gt`, `gte`,
    `lt`, `lte`, `year`, `month`, `day` and `isnull`, **Then** each generated filter works, with no
@@ -279,9 +279,10 @@ read and write a value at each precision, an empty value, and each refused input
 - **FR-007**: A filter taking a partial date MUST use the form field and the error codes of FS-004,
   offer its selects, accept the developer's choice of years, and read the ISO form from the filter's
   own query parameter, with the ISO form used when both arrive.
-- **FR-008**: A filter MUST report an entry that is not a partial date or not a whole number as an
-  error on that filter, before any query runs. It MUST NOT treat the entry as no entry, and MUST NOT
-  let it reach the database.
+- **FR-008**: `PartialDateFilter` and `PartialDateRangeFilter` MUST report an entry that is not a partial date or not a whole number as an
+  error on that filter, before any query runs. They MUST NOT treat the entry as no entry, and MUST
+  NOT let it reach the database. Through `Meta.fields`, `year`, `month` and `day` are django-filter's
+  own `NumberFilter`, which keeps its own handling of a decimal, and the guide says so.
 - **FR-009**: Mapping `PartialDateField` to `PartialDateFilter` through `Meta.filter_overrides` MUST
   let `Meta.fields` name the field with `exact`, `gt`, `gte`, `lt`, `lte`, `year`, `month`, `day`
   and `isnull`.

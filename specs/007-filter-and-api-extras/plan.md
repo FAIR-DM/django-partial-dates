@@ -45,8 +45,8 @@ returns that text, otherwise the parent's parts. An empty `?collected=` falls th
 
 **`PartialDateFilterField`** takes `years=None`, keyword-only, and defaults `widget` to
 `PartialDateFilterWidget(years=years)`. `clean` turns a `str` into a value with
-`PartialDate.fromisoformat`, raising `ValidationError(self.error_messages["invalid"], code="invalid")`
-on `ValueError`, and passes anything else to the parent.
+`PartialDate.fromisoformat`, raising a `ValidationError` from `self.error_messages["invalid"]`, with
+the code `invalid`, on `ValueError`, and passes anything else to the parent.
 
 **`PartialDateRangeWidget`** is `MultiWidget` with
 `{"after": PartialDateFilterWidget(years=years), "before": PartialDateFilterWidget(years=years)}`.
@@ -91,12 +91,14 @@ imported from `partial_dates/__init__.py`, `fields.py` or `forms.py`.
 - `tests/test_filters.py`: a `FilterSet` per case, over `Sample` rows from `SampleFactory`.
 - US-2 runs through a page: a `FilterView` in `tests/urls.py` over `Sample`, with a test template
   rendering `filter.form` and the list, using the Django test client.
-- `tests/test_rest_framework.py`: serializers over `Sample`, plus a `ListAPIView` with
-  `DjangoFilterBackend`, `authentication_classes = []`, `permission_classes = []` and a JSON
-  renderer, through `APIRequestFactory`, for US-1 scenario 10.
+- `tests/test_rest_framework.py`: serializers over `Sample`.
+- A `ListAPIView` with `DjangoFilterBackend`, `authentication_classes = []`,
+  `permission_classes = []` and a JSON renderer, through `APIRequestFactory`, is in
+  `tests/test_filters.py`, for US-1 scenario 10.
 - Absence: a fresh interpreter, as `tests/test_init.py` does, with `sys.modules["rest_framework"] =
   None` or `sys.modules["django_filters"] = None` set before the import. Setting an entry to `None`
-  makes importing it raise `ImportError`, so the test shows the library is not needed. Its base
+  makes importing it raise `ImportError`, so the test shows the library is not needed. The
+  subprocess configures settings and calls `django.setup()` first. Its base
   includes a check that `partial_dates.fields` and `partial_dates.forms` import with both blocked.
 - A test of a guide's examples and tables goes in `tests/test_guide.py`, beside the others.
 
@@ -107,7 +109,8 @@ imported from `partial_dates/__init__.py`, `fields.py` or `forms.py`.
   differs from the `range` lookup, what a user sees, and the recipes.
 - `docs/developer/rest-framework.md`: installing, declaring the field, reading and writing, refused
   input, and `ModelSerializer`.
-- Both linked from `docs/developer/index.md`, `docs/index.md`, and the README, with a CHANGELOG entry
+- Both linked from `docs/developer/index.md`, `docs/developer/installation.md`, `docs/index.md` and
+  the README, with a CHANGELOG entry
   in the story that adds the name.
 
 ### ADR

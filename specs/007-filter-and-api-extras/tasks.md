@@ -52,11 +52,11 @@ asserts wording or layout. No name starts with an underscore. Lines are at most 
   bounds (US-1 12)
 - [ ] T006 [US1] Across a relation, on a `Note`-style model with many dates per record: a record with
   one date before the range and one after it is not found, and one inside is (US-1 9, FR-006).
-  `exclude=True` and `distinct=True` behave as on any filter. Add a test model and migration only if
-  no existing model in `tests/models.py` holds many dated rows for one record
-- [ ] T007 [US1] In `tests/test_rest_framework.py`, class `TestFilterBackend`: a list view with
+  `exclude=True` and `distinct=True` behave as on any filter. Use `Record` and `Note`, with
+  `field_name="note__drafted"`, and add no model
+- [ ] T007 [US1] In `tests/test_filters.py`, class `TestFilterBackend`: a list view with
   `DjangoFilterBackend` gives a 400 naming the filter for text that is not a partial date, and the
-  filtered list for an ISO form (US-1 10, SC-004). In `tests/test_filters.py`, class
+  filtered list for an ISO form (US-1 10, SC-004). Class
   `TestWithoutRestFramework`: a fresh interpreter with `rest_framework` blocked imports
   `partial_dates.filters` and builds a filter set (US-1 13, FR-002)
 - [ ] T008 [US1] `docs/developer/filtering.md` (US-1 14, FR-013, FR-014, SC-006), links from
@@ -79,7 +79,7 @@ asserts wording or layout. No name starts with an underscore. Lines are at most 
   same parts selected (US-2 5). An ISO address shows its parts selected (US-2 6). A record holding no
   date is left out once narrowed (US-2 7)
 - [ ] T010 [US2] The range filter on the example project's sample list, with a `FilterView`, the form
-  on the list page and the seed data unchanged (FR-017). Add `samples/filters.py`. Say how to try it
+  on the list page and the seed data unchanged (FR-017). Add `example/samples/filters.py`. Say how to try it
   on `docs/developer/filtering.md`, as `docs/developer/forms.md` does
 
 ## Phase 4: User Story 3 — A developer exposes a partial date through an API (P2)
