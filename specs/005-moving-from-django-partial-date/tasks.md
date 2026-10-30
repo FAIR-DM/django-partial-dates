@@ -59,7 +59,10 @@ asserts wording. No name starts with an underscore. Lines are at most 88 charact
   put the command and the failure in the evidence
 - [ ] T009 [US1] US-1 18: `ConvertPartialDateField("m", "f", field)` deconstructs and writes through
   `MigrationWriter` to a migration that imports and runs, with the same arguments as `AlterField`.
-  The rest of the docs step for this story: `CHANGELOG.md`, and the names in `CONTEXT.md`
+  The rest of the docs step for this story: `CHANGELOG.md`, the names in `CONTEXT.md`, and the
+  first version of `docs/developer/moving-from-django-partial-date.md`, linked from
+  `docs/developer/index.md`, covering the two public names and what each kind of refused value
+  means. T013 completes the page
 
 ## Phase 2: User Story 2 — A developer removes django-partial-date from a project (P1)
 
