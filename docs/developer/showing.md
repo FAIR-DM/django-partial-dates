@@ -112,7 +112,8 @@ The mixin shows the display form for every partial date field of the model:
 - in a list, where the column keeps its heading, its sorting by the stored order and its link to
   the row. A field in `list_editable` keeps its selects and saves as before.
 - in a field of `readonly_fields`, under the label and help text of the model field, in a default
-  layout, in `fields` and in `fieldsets`.
+  layout, in `fields` and in `fieldsets`. A `TabularInline` keeps the label and drops the help
+  text, because its header looks fields up by name.
 - on every field of a page a user may only view. A field the admin leaves out, with `exclude`,
   `fields` or the form's `Meta.fields`, stays off the page.
 - in an inline, on a read-only field and on a page a user may only view, including a user who may

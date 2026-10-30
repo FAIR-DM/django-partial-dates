@@ -93,6 +93,7 @@ class with one declaration.
   form rather than the admin's empty display. Class `TestAdminReadOnly`
 - [x] T013 [US2] A read-only field the form declares is not asked for on save, as Django's own
   `get_form` arranges for a field named in `readonly_fields`. Class `TestAdminReadOnly`
+- [x] T014 [US2] A column named in `sortable_by` stays sortable. Class `TestAdminList`
 
 ## Dependencies and Dispatch
 

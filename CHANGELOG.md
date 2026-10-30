@@ -66,7 +66,7 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ModelAdmin`, `TabularInline` or `StackedInline` to show its partial date fields as their
   display form. A column in `list_display` keeps its heading, its sorting by the stored order and
   its link to the row, a field in `list_editable` keeps its selects, and a field in
-  `readonly_fields` keeps its label and help text. A page a user may only view, and an inline they
+  `readonly_fields` keeps its label, and its help text except in a tabular inline. A page a user may only view, and an inline they
   may only view, show every partial date as the display form, and a field the admin leaves out
   stays off the page. An empty value shows the admin's empty display. A field reached through a
   relation, a method and an admin with no mixin keep the ISO form. It needs no `INSTALLED_APPS`

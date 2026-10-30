@@ -275,6 +275,11 @@ class ListedRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
 
 
 @pytest.mark.django_db
+class SortableByRecordAdmin(PartialDateDisplayMixin, admin.ModelAdmin):
+    list_display = ["date", "other"]
+    sortable_by = ["date"]
+
+
 class TestAdminList:
     @pytest.mark.parametrize(
         "stored", [PartialDate(1990), PartialDate(1990, 6), PartialDate(1990, 6, 14)]
@@ -304,6 +309,17 @@ class TestAdminList:
         heading = str(Record._meta.get_field("date").verbose_name)
         headers = result_headers(response.context["cl"])
         assert heading in [header["text"] for header in headers]
+
+    def test_a_column_named_in_sortable_by_stays_sortable(self, admin_site, serve):
+        serve((Record, SortableByRecordAdmin))
+
+        response = admin_site.get(reverse("admin:tests_record_changelist"))
+
+        headers = {h["text"]: h for h in result_headers(response.context["cl"])}
+        date = headers[Record._meta.get_field("date").verbose_name]
+        other = headers[Record._meta.get_field("other").verbose_name]
+        assert date["sortable"] is True
+        assert other["sortable"] is False
 
     @pytest.mark.parametrize(("order", "reverse_order"), [("1", False), ("-1", True)])
     def test_the_column_sorts_by_the_stored_order(
@@ -652,7 +668,7 @@ class InlinedRecordAdmin(admin.ModelAdmin):
 @pytest.fixture
 def dated_record(db):
     return RecordFactory(
-        date=PartialDate(1990),
+        date=PartialDate(1990, 8),
         other=PartialDate(1991, 6, 14),
         defaulted=PartialDate(1992, 3),
     )

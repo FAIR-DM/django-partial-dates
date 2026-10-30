@@ -122,6 +122,18 @@ class PartialDateDisplayMixin(BaseModelAdmin):
             return None
         return self.substitute(self.listed_names(), links)
 
+    def get_sortable_by(self, request: HttpRequest) -> list[Any]:
+        """Keep the partial date columns named in `sortable_by` sortable.
+
+        Args:
+            request: The current request.
+
+        Returns:
+            The columns of the change list that can be sorted.
+        """
+        parent = cast(Any, super())
+        return self.substitute(self.listed_names(), parent.get_sortable_by(request))
+
     def whole_object_read_only(self, request: HttpRequest, obj: Any = None) -> bool:
         """Say whether the user can only read this object.
 

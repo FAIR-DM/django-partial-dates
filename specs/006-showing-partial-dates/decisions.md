@@ -245,3 +245,22 @@ fixed by the orchestrator because each was a line or two with its test already w
   it. Django's inline `get_formset` has no such step, so an inline stays as Django leaves it.
 
 **ADR:** none — local to the mixin.
+
+## D21 — Code review outcome
+
+Verdict: changes requested, one high finding, on the diff at 00afd83.
+
+- REV-001 (high), remedied: a column named in `sortable_by` lost its sorting, against FR-014, because
+  Django compares that list by name. The mixin now has `get_sortable_by`. The new test fails with
+  the method removed.
+- REV-002 (medium), accepted: a read-only partial date in a `TabularInline` loses its help text and
+  form `Meta` labels, because the inline's header looks them up by name and offers no hook. The label
+  from the model field stays. The guide and the changelog say so. No test pins the limit, since it
+  would only record that Django has not changed.
+- REV-003 (low), declined: in a default layout a read-only partial date stays at its place in the
+  form, where Django would move a read-only field to the end. Staying put harms nothing, and fixing
+  it would mean more code to get a worse layout.
+- REV-004 (low), remedied: a test could not fail for a year, whose display form and ISO form match.
+  The fixture's date is now a month.
+
+**ADR:** none — corrections to this feature's code.
