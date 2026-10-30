@@ -72,6 +72,5 @@ value reads correctly for each person.
 
 ## Why a month does not read as a day
 
-The display form never goes through a real date for the part it did not record. A month is written
-with the format Django has for a month and a year, which names no day, so no day is written and
-none is invented.
+Each precision has a format that names only what was recorded. A month is written with the format
+Django has for a month and a year, which names no day, so no day is written and none is invented.
