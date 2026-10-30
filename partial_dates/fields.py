@@ -8,7 +8,7 @@ from django.db import models
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.utils.translation import gettext_lazy as _
 
-from partial_dates.lookups import Day, Month, Year
+from partial_dates.lookups import Day, Month, Start, Year
 from partial_dates.partial_date import PartialDate
 
 
@@ -206,3 +206,4 @@ class PartialDateField(models.Field):
 PartialDateField.register_lookup(Year)
 PartialDateField.register_lookup(Month)
 PartialDateField.register_lookup(Day)
+PartialDateField.register_lookup(Start)

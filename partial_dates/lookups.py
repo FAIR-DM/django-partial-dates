@@ -3,7 +3,7 @@
 from typing import Any
 
 from django.db.backends.base.base import BaseDatabaseWrapper
-from django.db.models import IntegerField, Transform
+from django.db.models import DateField, IntegerField, Transform
 from django.db.models.lookups import Exact
 from django.db.models.sql.compiler import SQLCompiler
 
@@ -56,6 +56,46 @@ class Day(Transform):
     lookup_name = "day"
     output_field = IntegerField()
     template = "CAST(NULLIF(SUBSTR(%(expressions)s, 9, 2), '') AS INTEGER)"
+
+
+class Start(Transform):
+    """The first day of a partial date's period, as a real date.
+
+    A year sits on 1 January and a month on its first day. The result is empty only
+    for a row holding no date.
+
+    Attributes:
+        lookup_name: `start`.
+        output_field: The date the transform gives.
+        template: SQL completing the stored text to a day and reading it as a date.
+    """
+
+    lookup_name = "start"
+    output_field = DateField()
+    template = "CAST(SUBSTR(%(expressions)s || '-01-01', 1, 10) AS DATE)"
+
+    def as_sqlite(
+        self,
+        compiler: SQLCompiler,
+        connection: BaseDatabaseWrapper,
+        **extra_context: Any,
+    ) -> tuple[str, Any]:
+        """Complete the text to a day without a cast, which SQLite reads as a date.
+
+        Args:
+            compiler: The compiler building the query.
+            connection: The database the query runs on.
+            **extra_context: Context Django passes to the template.
+
+        Returns:
+            SQL and its parameters.
+        """
+        return self.as_sql(
+            compiler,
+            connection,
+            template="SUBSTR(%(expressions)s || '-01-01', 1, 10)",
+            **extra_context,
+        )
 
 
 @Year.register_lookup

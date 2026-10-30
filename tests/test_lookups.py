@@ -1,8 +1,10 @@
+import datetime
 import re
 
 import pytest
 from django.db.models import Count, F
 
+from partial_dates import PartialDate
 from tests.factories import EventFactory, RecordFactory, SampleFactory
 from tests.models import Event, Record, Sample
 
@@ -304,6 +306,160 @@ class TestDay:
         ).values_list("collected__day", flat=True)
 
         assert list(result) == [2, 9, 10, None]
+
+
+STARTS = [
+    "0001",
+    "1990",
+    "1990-01",
+    "1990-01-01",
+    "1990-06",
+    "1990-06-01",
+    "1990-06-14",
+    "2000-02-29",
+    "9999-12-31",
+]
+
+
+@pytest.mark.django_db
+class TestStart:
+    @pytest.fixture
+    def starts(self, db):
+        return [SampleFactory(collected=text) for text in [*STARTS, None]]
+
+    def test_values_list_gives_the_start_of_the_value_and_none_for_no_date(
+        self, starts
+    ):
+        result = Sample.objects.order_by("pk").values_list(
+            "collected__start", flat=True
+        )
+
+        assert list(result) == [
+            *(PartialDate.fromisoformat(text).start for text in STARTS),
+            None,
+        ]
+
+    def test_values_and_annotate_give_a_date(self, starts):
+        values = Sample.objects.order_by("pk").values("collected__start")
+        annotated = Sample.objects.annotate(first=F("collected__start")).order_by("pk")
+
+        assert values[4] == {"collected__start": datetime.date(1990, 6, 1)}
+        assert annotated[6].first == datetime.date(1990, 6, 14)
+
+    def test_grouping_by_start_counts_dates_that_start_on_one_day(self, starts):
+        counts = (
+            Sample.objects.filter(collected__year=1990)
+            .values("collected__start")
+            .annotate(total=Count("pk"))
+            .order_by("collected__start")
+        )
+
+        assert list(counts) == [
+            {"collected__start": datetime.date(1990, 1, 1), "total": 3},
+            {"collected__start": datetime.date(1990, 6, 1), "total": 2},
+            {"collected__start": datetime.date(1990, 6, 14), "total": 1},
+        ]
+
+    def test_dates_that_share_a_start_stay_different_values(self, starts):
+        result = Sample.objects.filter(collected__start=datetime.date(1990, 6, 1))
+
+        assert sorted(str(sample.collected) for sample in result) == [
+            "1990-06",
+            "1990-06-01",
+        ]
+
+    @pytest.mark.parametrize(
+        ("lookup", "expected"),
+        [
+            ("exact", ["1990-06-14"]),
+            ("gt", ["2000-02-29", "9999-12-31"]),
+            ("gte", ["1990-06-14", "2000-02-29", "9999-12-31"]),
+            (
+                "lt",
+                ["0001", "1990", "1990-01", "1990-01-01", "1990-06", "1990-06-01"],
+            ),
+            (
+                "lte",
+                [
+                    "0001",
+                    "1990",
+                    "1990-01",
+                    "1990-01-01",
+                    "1990-06",
+                    "1990-06-01",
+                    "1990-06-14",
+                ],
+            ),
+        ],
+    )
+    def test_start_compares_with_a_real_date(self, starts, found, lookup, expected):
+        result = found(
+            Sample.objects.filter(
+                **{f"collected__start__{lookup}": datetime.date(1990, 6, 14)}
+            )
+        )
+
+        assert result == expected
+
+    def test_start_range_includes_both_ends(self, starts, found):
+        result = found(
+            Sample.objects.filter(
+                collected__start__range=(
+                    datetime.date(1990, 6, 1),
+                    datetime.date(1990, 6, 14),
+                )
+            )
+        )
+
+        assert result == ["1990-06", "1990-06-01", "1990-06-14"]
+
+    def test_start_does_not_find_a_row_holding_no_date(self, starts, found):
+        assert None not in found(
+            Sample.objects.filter(collected__start__lte=datetime.date(9999, 12, 31))
+        )
+
+    def test_order_by_start_with_the_field_second_gives_a_stable_order(self, starts):
+        result = Sample.objects.order_by(
+            F("collected__start").asc(nulls_last=True), "collected"
+        )
+
+        assert [None if s.collected is None else str(s.collected) for s in result] == [
+            "0001",
+            "1990",
+            "1990-01",
+            "1990-01-01",
+            "1990-06",
+            "1990-06-01",
+            "1990-06-14",
+            "2000-02-29",
+            "9999-12-31",
+            None,
+        ]
+
+    @pytest.mark.parametrize("text", ["0001", "9999-12-31", "2000-02-29"])
+    def test_start_is_exact_at_the_edges_of_the_calendar(self, db, text):
+        SampleFactory(collected=text)
+
+        result = Sample.objects.values_list("collected__start", flat=True).get()
+
+        assert result == PartialDate.fromisoformat(text).start
+
+    def test_year_month_day_and_start_equal_the_value_attributes(self, grid):
+        rows = Sample.objects.exclude(collected=None).values_list(
+            "collected",
+            "collected__year",
+            "collected__month",
+            "collected__day",
+            "collected__start",
+        )
+
+        for value, year, month, day, start in rows:
+            assert (year, month, day, start) == (
+                value.year,
+                value.month,
+                value.day,
+                value.start,
+            )
 
 
 NAMES_AN_INDEX = re.compile(r"\bindex\b", re.IGNORECASE)
