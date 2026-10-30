@@ -172,6 +172,10 @@ holding rows several migrations behind. Compare the three schemas.
   the ISO form. FS-002's field refuses it in a fixture, and the guide says so.
 - An earlier data migration that imports django-partial-date's value class needs its own edit,
   which the guide describes.
+- A developer who leaves the `AlterField` Django generated in place of the conversion gets a
+  database error on a table holding rows, on both databases, and no value changes. Django's own
+  alteration would otherwise cut every PostgreSQL value to its first ten characters, which writes
+  a month and a day nobody recorded.
 - A project keeps this package installed after the move, because its migrations refer to it.
 
 ## Clarifications
