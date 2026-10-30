@@ -31,13 +31,13 @@ project's list. No migration and no change to any existing module of the package
 
 ### `partial_dates/filters.py`
 
-```python
-class PartialDateFilterWidget(PartialDateWidget): ...
-class PartialDateFilterField(PartialDateField): ...  # forms.PartialDateField
-class PartialDateRangeWidget(forms.MultiWidget): ...
-class PartialDateRangeField(forms.MultiValueField): ...
-class PartialDateFilter(django_filters.Filter): ...
-class PartialDateRangeFilter(django_filters.RangeFilter): ...
+```text
+PartialDateFilterWidget(PartialDateWidget)
+PartialDateFilterField(forms.PartialDateField)
+PartialDateRangeWidget(forms.MultiWidget)
+PartialDateRangeField(forms.MultiValueField)
+PartialDateFilter(django_filters.Filter)
+PartialDateRangeFilter(django_filters.RangeFilter)
 ```
 
 **`PartialDateFilterWidget`** overrides `value_from_datadict`. When `data.get(name)` is not empty it
@@ -71,10 +71,7 @@ the day-precision `PartialDate` of `value.stop.end`, then calls `super().filter`
 
 ### `partial_dates/rest_framework.py`
 
-```python
-class PartialDateField(serializers.Field):
-    default_error_messages = {"invalid": _("Enter a date as YYYY, YYYY-MM or YYYY-MM-DD.")}
-```
+`PartialDateField(serializers.Field)`, with one `invalid` message.
 
 - `to_representation(value)`: `value.isoformat()` for a `PartialDate`, otherwise
   `PartialDate.fromisoformat(value).isoformat()`.

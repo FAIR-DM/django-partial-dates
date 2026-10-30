@@ -19,37 +19,11 @@ from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
 from partial_dates.partial_date import PartialDate
 from tests.factories import NoteFactory, RecordFactory, SampleFactory
 from tests.models import Record, Sample
+from tests.urls import SampleFilter
 
 TEXTS_IN_JUNE = ["1990-06", "1990-06-01", "1990-06-14"]
 LOOKUPS = ["exact", "gt", "gte", "lt", "lte"]
 BOUNDS = ["1990", "1990-06", "1990-06-14"]
-
-
-@pytest.fixture
-def filterset():
-    def build(**filters):
-        meta = type("Meta", (), {"model": Sample, "fields": []})
-        attrs = {"Meta": meta, **filters}
-        return type("SampleFilter", (django_filters.FilterSet,), attrs)
-
-    return build
-
-
-@pytest.fixture
-def run(filterset):
-    def apply(data, **filters):
-        return filterset(**filters)(data, queryset=Sample.objects.all())
-
-    return apply
-
-
-@pytest.fixture
-def refusal():
-    def code(applied, name="collected"):
-        assert not applied.is_valid()
-        return applied.form.errors.as_data()[name][0].code
-
-    return code
 
 
 class TestPartialDateFilter:
@@ -350,7 +324,6 @@ TEXTS = [
 
 
 def entered(after=None, before=None, name="collected"):
-    """Return the query string for a range, as ISO text."""
     return {
         f"{name}_{side}": bound
         for side, bound in (("after", after), ("before", before))
@@ -359,7 +332,6 @@ def entered(after=None, before=None, name="collected"):
 
 
 def entered_by_parts(after=None, before=None, name="collected"):
-    """Return the query string for a range, as the select parts."""
     data = {}
     for side, bound in (("after", after), ("before", before)):
         if bound is None:
@@ -649,15 +621,6 @@ class SampleSerializer(serializers.Serializer):
     collected = serializers.CharField(allow_null=True)
 
 
-class SampleFilter(django_filters.FilterSet):
-    collected = PartialDateFilter()
-    when = PartialDateRangeFilter(field_name="collected")
-
-    class Meta:
-        model = Sample
-        fields = []
-
-
 class SampleList(ListAPIView):
     queryset = Sample.objects.order_by("pk")
     serializer_class = SampleSerializer
@@ -749,8 +712,6 @@ class TestWithoutRestFramework:
 
 
 class Page(HTMLParser):
-    """The selects and listed rows of a rendered filter page."""
-
     def __init__(self, html):
         super().__init__()
         self.selects = {}

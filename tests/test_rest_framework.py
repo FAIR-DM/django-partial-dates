@@ -18,6 +18,11 @@ class PlainSerializer(serializers.Serializer):
 
 
 class TestReading:
+    def test_an_object_holding_empty_text_reads_as_no_date(self):
+        data = PlainSerializer(SimpleNamespace(collected="")).data
+
+        assert data["collected"] is None
+
     @pytest.mark.parametrize(
         ("value", "expected"),
         [

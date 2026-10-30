@@ -22,16 +22,19 @@ class PartialDateField(serializers.Field):
         "invalid": _("Enter a date as YYYY, YYYY-MM or YYYY-MM-DD."),
     }
 
-    def to_representation(self, value: PartialDate | str) -> str:
+    def to_representation(self, value: PartialDate | str) -> str | None:
         """Write a partial date as its ISO form.
 
         Args:
-            value: A `PartialDate`, or the ISO text an instance holds before it is
-                read back from the database.
+            value: A `PartialDate`, or the text an instance holds before it is read
+                back from the database, where `""` stands for no date, as it does on
+                the model field.
 
         Returns:
-            The ISO form: `YYYY`, `YYYY-MM` or `YYYY-MM-DD`.
+            The ISO form, `YYYY`, `YYYY-MM` or `YYYY-MM-DD`, or `None` for `""`.
         """
+        if value == "":
+            return None
         if isinstance(value, PartialDate):
             return value.isoformat()
         return PartialDate.fromisoformat(value).isoformat()

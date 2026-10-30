@@ -1,5 +1,6 @@
 import re
 
+import django_filters
 import pytest
 from django.db import DatabaseError, connection, migrations, models, transaction
 from django.db.migrations.state import ModelState, ProjectState
@@ -7,9 +8,37 @@ from django.db.migrations.state import ModelState, ProjectState
 from partial_dates import PartialDateField
 from partial_dates.conversion import ConvertPartialDateField, OldPartialDateField
 from tests.factories import EventFactory, NoteFactory, RecordFactory, SampleFactory
+from tests.models import Sample
 
 SEEK = re.compile(r"SEARCH .* USING|Index (Only )?Scan")
 WALK = re.compile(r"USING (COVERING )?INDEX|Index (Only )?Scan")
+
+
+@pytest.fixture
+def filterset():
+    def build(**filters):
+        meta = type("Meta", (), {"model": Sample, "fields": []})
+        attrs = {"Meta": meta, **filters}
+        return type("SampleFilter", (django_filters.FilterSet,), attrs)
+
+    return build
+
+
+@pytest.fixture
+def run(filterset):
+    def apply(data, **filters):
+        return filterset(**filters)(data, queryset=Sample.objects.all())
+
+    return apply
+
+
+@pytest.fixture
+def refusal():
+    def code(applied, name="collected"):
+        assert not applied.is_valid()
+        return applied.form.errors.as_data()[name][0].code
+
+    return code
 
 
 @pytest.fixture

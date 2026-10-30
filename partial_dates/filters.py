@@ -143,8 +143,9 @@ class PartialDateFilter(django_filters.Filter):
 
     The lookups are `exact`, `gt`, `gte`, `lt` and `lte`, which take a partial date,
     and `year`, `month` and `day`, alone or followed by one of those five, which take
-    a whole number. The keyword arguments are those of `django_filters.Filter`, and
-    `years` is passed to the form field.
+    a whole number. The keyword arguments are those of `django_filters.Filter`. `years`
+    is passed to the form field of a lookup that takes a partial date. A lookup that
+    takes a whole number has no selects, and does not accept it.
 
     Args:
         *args: Positional arguments of `django_filters.Filter`.

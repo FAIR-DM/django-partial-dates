@@ -355,7 +355,8 @@ class DatedFilter(django_filters.FilterSet):
 ## Offer other years
 
 Both filters show a year select that lists the years from the current year down to 1900. Name
-the years to offer with `years`, and a range offers them for both bounds.
+the years to offer with `years`, and a range offers them for both bounds. A filter on a year,
+month or day takes a number and has no selects, so it does not accept `years`.
 
 ```python
 >>> class RecentFilter(django_filters.FilterSet):
