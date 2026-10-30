@@ -46,22 +46,15 @@ to work around the comparisons. This item replaces all of that with one immutabl
 
 ### R2 — A model field storing the ISO form
 
-*feature · advances G1, G9*
+*delivered in [#8](https://github.com/FAIR-DM/django-partial-dates/issues/8), [#9](https://github.com/FAIR-DM/django-partial-dates/issues/9) · advances G1, G9*
 
-The field from ADR 0001: one `varchar(10)` column with `C` collation, a check constraint that
-blocks a malformed value written by any route, and the value type in and out. It is the first
-module to import Django, so Django becomes a runtime dependency here. The `C` collation is the
-reason range filters and the year lookup use the index, so the field is tested against PostgreSQL
-as well as SQLite from the start. The shared test workflow runs SQLite only, so this repository
-adds its own PostgreSQL job.
-
-**Deliverables:**
-
-- The model field, accepting the value type, an ISO string or `None`
-- The column type, collation and check constraint, emitted in migrations
-- Serialisation through `value_to_string`, so `dumpdata` and `loaddata` round-trip, empty values
-  included
-- The test suite run against PostgreSQL and SQLite in continuous integration
+`PartialDateField` stores a partial date as ADR 0001 sets out: one `varchar(10)` column with `C`
+collation on PostgreSQL and a check constraint that blocks a malformed value written by any route,
+with the value type going in and coming out and the column, collation and check carried by the
+migration. It is the first module to import Django, so Django is now a runtime dependency. Fixtures
+round-trip through `dumpdata` and `loaddata`, empty values included. The whole test suite runs on
+SQLite and on PostgreSQL on every pull request, the second through a job in this repository's own
+tests workflow, because the shared workflow runs SQLite only.
 
 ### R3 — Filtering, ordering and grouping in the database
 

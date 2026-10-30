@@ -17,3 +17,74 @@ jobs:
     with:
       coverage-package: partial_dates
     secrets: inherit
+
+  # The workflow above runs SQLite only. The field's collation and check constraint
+  # differ by database, so the suite runs on PostgreSQL as well, on Django 5.2 LTS and
+  # the current stable release.
+  postgresql:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    name: Test Python 3.13, Django ${{ matrix.django-version }}, PostgreSQL 17
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        django-version: ['5.2', '6.1']
+      fail-fast: false
+    env:
+      # `uv run` would otherwise re-sync to uv.lock and undo the Django pinned below.
+      UV_NO_SYNC: "1"
+      TEST_DATABASE: postgresql
+      PGDATABASE: partial_dates
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGPORT: "5432"
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: partial_dates
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          python-version: '3.13'
+          enable-cache: true
+          cache-suffix: ${{ matrix.django-version }}
+
+      - name: Sync dependencies
+        run: uv sync --locked
+
+      - name: Pin Django version
+        env:
+          DJANGO_VERSION: ${{ matrix.django-version }}
+        run: |
+          uv pip install "django~=${DJANGO_VERSION}.0"
+          # Fail rather than report a run that never used this Django.
+          uv run python -c "import django, os, sys; want = os.environ['DJANGO_VERSION']; got = '.'.join(map(str, django.VERSION[:2])); print(f'Django {django.__version__}'); sys.exit(0 if got == want else f'expected Django {want}, got {got}')"
+
+      - name: Check the database
+        env:
+          DJANGO_SETTINGS_MODULE: tests.settings
+        run: |
+          # Fail rather than report a run that fell back to SQLite.
+          uv run python -c "import django, sys; django.setup(); from django.db import connection; print(connection.vendor, connection.get_database_version()); sys.exit(0 if connection.vendor == 'postgresql' else f'expected postgresql, got {connection.vendor}')"
+
+      - name: Run tests
+        run: uv run pytest
