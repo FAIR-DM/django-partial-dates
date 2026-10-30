@@ -11,6 +11,8 @@ holds a part nobody gave.
   knowing which uncertain dates each filter includes.
 - [Order, select and group partial dates](developer/querying.md#order-by-the-date) by the date
   or by one of its parts, and put them on a date axis with `start`.
+- [Move from django-partial-date](developer/moving-from-django-partial-date.md) with a migration
+  that converts the column in place and loses no value.
 
 ## Requirements
 

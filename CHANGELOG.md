@@ -32,6 +32,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `start` transform on `PartialDateField`, giving the first day of a date's period as a
   `datetime.date`, for a date axis. It works in `values`, `values_list`, `annotate`, `order_by`,
   grouping and comparison with real dates.
+- `ConvertPartialDateField`, a migration operation that converts a column written by
+  django-partial-date into a `PartialDateField` in place, on PostgreSQL and SQLite. It takes the
+  arguments of Django's `AlterField`, so the only edit to the migration Django generates is the
+  name of the operation. Every value becomes the ISO form at the precision its seconds recorded,
+  and every empty value stays empty. The operation converts a value only when it is exactly what
+  django-partial-date writes. Otherwise it raises `RefusedValuesError`, naming the model, the
+  field, the number of refused values and the primary key and stored value of the first 20,
+  before anything has changed. Migrating backwards restores the old column and every stored value.
+- `OldPartialDateField`, a field that existing migrations use in place of django-partial-date's,
+  so they describe the same column and a project can uninstall that package.
+- A guide to moving from django-partial-date.
 - The developer guide: installation, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a
   range, leaving every one out, and taking in the whole of a month or year. It also covers

@@ -13,6 +13,7 @@ from django.db import (
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.graph import MigrationGraph
 from django.db.migrations.optimizer import MigrationOptimizer
+from django.db.migrations.writer import MigrationWriter
 
 from partial_dates import PartialDate, PartialDateField
 from partial_dates.conversion import (
@@ -687,3 +688,40 @@ class TestBareAlterField:
 
         assert read_column("bare_rows", "seen") == rows
         assert describe_column("bare_rows", "seen") == column
+
+
+@pytest.mark.django_db(transaction=True)
+class TestMigrationFile:
+    def test_operation_deconstructs_with_the_arguments_of_alter_field(self):
+        field = PartialDateField(null=True)
+
+        _, args, kwargs = ConvertPartialDateField("m", "f", field).deconstruct()
+        _, alter_args, alter_kwargs = migrations.AlterField(
+            "m", "f", field
+        ).deconstruct()
+
+        assert (args, kwargs) == (alter_args, alter_kwargs)
+        assert kwargs["field"].deconstruct() == field.deconstruct()
+
+    def test_written_migration_imports_and_runs(
+        self, build_state, create_tables, insert_rows, read_column
+    ):
+        state = build_state("file_rows", {"seen": OldPartialDateField(null=True)})
+        create_tables(state)
+        insert_rows("file_rows", "seen", ["1990-01-01 00:00:00", None])
+        migration = migrations.Migration("0002_convert", "conv")
+        migration.operations = [
+            ConvertPartialDateField("thing", "seen", PartialDateField(null=True))
+        ]
+        source = MigrationWriter(migration).as_string()
+        namespace = {}
+
+        exec(compile(source, "0002_convert.py", "exec"), namespace)  # noqa: S102
+        written = namespace["Migration"]("0002_convert", "conv")
+        with connection.schema_editor() as editor:
+            written.apply(state, editor)
+
+        assert [type(operation) for operation in written.operations] == [
+            ConvertPartialDateField
+        ]
+        assert read_column("file_rows", "seen") == [(1, "1990"), (2, None)]
