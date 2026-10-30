@@ -90,7 +90,7 @@ configuration.
 
 ### R5 — Moving from django-partial-date
 
-*delivered in [#20](https://github.com/FAIR-DM/django-partial-dates/issues/20), [#25](https://github.com/FAIR-DM/django-partial-dates/issues/25), [#26](https://github.com/FAIR-DM/django-partial-dates/issues/26) · advances G5*
+*delivered in [#20](https://github.com/FAIR-DM/django-partial-dates/issues/20) · advances G5*
 
 django-partial-date stores a timestamp with the precision in its seconds. Every project moving
 over needs to turn that into the ISO form without losing a value, and FAIR-DM has two packages
@@ -111,15 +111,15 @@ The breadth that makes the package dependable rather than merely usable.
 
 *delivered in [#28](https://github.com/FAIR-DM/django-partial-dates/issues/28) · advances G7*
 
-A year-only date shown as "1 January 1990" is the false certainty this package exists to avoid,
-and it is easy to do by accident in a template. FairDM's `format_partial_date()` is the shape to
-generalise: a date shown in the reader's locale at its own precision.
+A reader sees a partial date in their own language at the precision it was recorded, so a year
+reads as a year and never as "1 January 1990". FairDM's `format_partial_date()` was the shape
+generalised here.
 
 **Deliverables:**
 
 - Locale-aware formatting at year, month and day precision
 - A template filter for it
-- A display of the field in the admin's list and detail views
+- A mixin that shows the field in the admin's lists and read-only views
 
 ### R7 — Model history and other serialisers
 
