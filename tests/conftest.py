@@ -4,6 +4,8 @@ import pytest
 from django.db import DatabaseError, connection, models, transaction
 from django.db.migrations.state import ModelState, ProjectState
 
+from partial_dates import PartialDateField
+from partial_dates.conversion import ConvertPartialDateField, OldPartialDateField
 from tests.factories import EventFactory, RecordFactory, SampleFactory
 
 SEEK = re.compile(r"SEARCH .* USING|Index (Only )?Scan")
@@ -277,3 +279,19 @@ def describe_column(check_behaviour):
         }
 
     return describe
+
+
+@pytest.fixture
+def convert(build_state, create_tables, insert_rows, apply_forwards):
+    def run(table, rows, meta=None, **options):
+        state = build_state(
+            table, {"seen": OldPartialDateField(**options)}, **(meta or {})
+        )
+        create_tables(state)
+        insert_rows(table, "seen", rows)
+        operation = ConvertPartialDateField(
+            "thing", "seen", PartialDateField(**options)
+        )
+        return apply_forwards(operation, state)
+
+    return run

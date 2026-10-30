@@ -101,21 +101,6 @@ SHAPES = {
 
 @pytest.mark.django_db(transaction=True)
 class TestConversion:
-    @pytest.fixture
-    def convert(self, build_state, create_tables, insert_rows, apply_forwards):
-        def run(table, rows, meta=None, **options):
-            state = build_state(
-                table, {"seen": OldPartialDateField(**options)}, **(meta or {})
-            )
-            create_tables(state)
-            insert_rows(table, "seen", rows)
-            operation = ConvertPartialDateField(
-                "thing", "seen", PartialDateField(**options)
-            )
-            return apply_forwards(operation, state)
-
-        return run
-
     @pytest.mark.parametrize(("stored", "expected"), CONVERSIONS)
     def test_value_converts_to_its_iso_form(
         self, convert, read_column, stored, expected
@@ -193,3 +178,34 @@ class TestConversion:
         changes = MigrationAutodetector(after, target).changes(graph=MigrationGraph())
 
         assert changes == {}
+
+
+ZONES = [
+    pytest.param(True, "America/New_York", id="use_tz-west"),
+    pytest.param(True, "Asia/Tokyo", id="use_tz-east"),
+    pytest.param(False, "Europe/Berlin", id="no_tz-east"),
+    pytest.param(False, "America/New_York", id="no_tz-west"),
+]
+
+
+@pytest.mark.django_db(transaction=True)
+class TestTimeZones:
+    @pytest.mark.parametrize(("use_tz", "zone"), ZONES)
+    def test_values_convert_to_the_date_the_old_field_read(
+        self, convert, read_column, settings, use_tz, zone
+    ):
+        settings.USE_TZ = use_tz
+        settings.TIME_ZONE = zone
+        stored = {
+            "1990-01-01 00:00:00": "1990",
+            "1800-01-01 00:00:00": "1800",
+            "1800-06-01 00:00:01": "1800-06",
+            "1800-06-14 00:00:02": "1800-06-14",
+            "1990-12-31 00:00:02": "1990-12-31",
+        }
+
+        convert("conv_zone", list(stored), null=True)
+
+        assert [text for _, text in read_column("conv_zone", "seen")] == list(
+            stored.values()
+        )
