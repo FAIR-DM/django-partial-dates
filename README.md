@@ -29,7 +29,8 @@ Pre-alpha. The package holds a partial date value and a model field that stores 
 field filters, orders, selects and groups by year, month, day and range in the database. A form
 field and widget enter a partial date as a year, a month and a day select. The model field gives
 them to model forms and the admin, so there is nothing to configure. A migration operation converts
-a column written by django-partial-date.
+a column written by django-partial-date. Two optional extras add ready-made filters for django-filter
+and a serializer field for Django REST framework.
 
 ## Usage
 

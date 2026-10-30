@@ -135,14 +135,14 @@ only.
 
 ### R8 — django-filter and Django REST framework extras
 
-*feature · advances G10*
+*delivered in [#30](https://github.com/FAIR-DM/django-partial-dates/issues/30) · advances G10*
 
-FairDM filters measurements by date with django-filter and exposes an API. Ready-made filters and
-a serializer field would save each project from writing its own, but they belong in optional
-extras so the core keeps Django as its only dependency.
+A project using django-filter or Django REST framework gets a partial date there without writing
+its own filter or serializer field. Both are optional extras, so the core keeps Django as its only
+dependency. FairDM's own date filters were the shape generalised here.
 
 **Deliverables:**
 
-- A django-filter filter class validating a partial date, with range and precision lookups
+- `PartialDateFilter` for a date, a year, a month or a day, and `PartialDateRangeFilter` for a range
 - A Django REST framework serializer field reading and writing the ISO form
 - Both installable as extras, with the core importing neither

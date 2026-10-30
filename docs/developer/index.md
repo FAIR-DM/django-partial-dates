@@ -3,8 +3,7 @@
 This guide is for a developer building a Django project with `django-partial-dates`. It covers
 installing the package, querying the dates it stores, entering them in a form, showing them to a
 reader, filtering them with django-filter, exposing them through Django REST framework and moving
-a project
-from django-partial-date.
+a project from django-partial-date.
 
 - [Installation](installation.md): install the package and add the field to a model.
 - [Querying](querying.md): filter partial dates by year, month, day or range, and find out which
