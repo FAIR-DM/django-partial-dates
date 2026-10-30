@@ -1,8 +1,10 @@
 import datetime
 
 import pytest
+from django.apps import apps
+from django.core.management import call_command
 from django.template import engines
-from django.test import override_settings
+from django.test import modify_settings, override_settings
 from django.utils import translation
 from django.utils.formats import reset_format_cache
 
@@ -78,3 +80,16 @@ class TestPartialDateFilter:
             )
 
         assert text == "&lt;14&gt;/06/1990"
+
+
+class TestAppEntry:
+    def test_the_app_adds_no_model(self):
+        assert list(apps.get_app_config("partial_dates").get_models()) == []
+
+    def test_makemigrations_finds_nothing_to_make(self, db):
+        call_command("makemigrations", check=True, dry_run=True)
+
+    @modify_settings(INSTALLED_APPS={"remove": "partial_dates"})
+    def test_the_python_route_works_without_the_entry(self):
+        with translation.override("de"):
+            assert PartialDate(1990, 6, 14).display_form() == "14. Juni 1990"

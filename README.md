@@ -252,6 +252,10 @@ and year, and a day as a full date. No part that nobody recorded appears.
 'June 14, 1990'
 ```
 
+In a template, add `"partial_dates"` to `INSTALLED_APPS`, then `{% load partial_dates %}` and
+write `{{ value|partial_date }}`. An empty value renders as empty text. The method needs no app
+entry.
+
 `str()` and `isoformat()` still give the ISO form in every language. The
 [showing guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/showing.md)
 shows other languages and says what each precision uses.

@@ -3,7 +3,8 @@
 A reader should see a partial date at the precision it was recorded at, written the way their
 language writes dates. A date known to the year reads as a year, and nothing suggests a month or a
 day that nobody gave. `PartialDate.display_form()` gives that text. This page shows what it gives at
-each precision, how to get it in Python, and why it is a method and not what `str()` returns.
+each precision, how to show it in a template and in Python, and why it is a method and not what
+`str()` returns.
 
 ## Get the display form of a date
 
@@ -32,6 +33,44 @@ Call `display_form()` on the value.
 The method returns text for the language active when you call it, so it needs Django's settings to
 be configured, which any running project has.
 
+## Show a date in a template
+
+A template needs the package's app, because Django finds a tag library through an installed app.
+Add it to `INSTALLED_APPS`. The app adds no model and needs no migration.
+
+```python
+INSTALLED_APPS = [
+    # ...
+    "partial_dates",
+]
+```
+
+Load the library in the template and apply the filter.
+
+```python
+>>> from django.template import engines
+>>> template = engines["django"].from_string(
+...     "{% load partial_dates %}{{ value|partial_date }}"
+... )
+>>> with translation.override("de"):
+...     template.render({"value": PartialDate(1990, 6)})
+'Juni 1990'
+```
+
+An empty value, and anything that is not a partial date, renders as empty text, so the page raises
+no error and Django's `default` filter supplies whatever a missing date should show.
+
+```python
+>>> template = engines["django"].from_string(
+...     "{% load partial_dates %}{{ value|partial_date|default:'unknown' }}"
+... )
+>>> template.render({"value": None})
+'unknown'
+```
+
+The text is escaped like any other text in the template. A template that shows a date with no
+filter, as `{{ value }}`, still writes the ISO form.
+
 ## Show a date in another language
 
 Activate the language around the call. The same value reads in each language, including the name of
@@ -48,7 +87,7 @@ the month.
 ```
 
 In a view, Django has already activated the language of the request, so call the method and use
-the text.
+the text. The method works without the app entry, and it gives the same text the filter renders.
 
 ## What each precision shows
 

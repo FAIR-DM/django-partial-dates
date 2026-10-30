@@ -56,6 +56,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   active when it is called. A year reads as a year, a month as Django's `YEAR_MONTH_FORMAT` and a
   day as its `DATE_FORMAT`, so no month or day that nobody recorded appears. The year has four
   digits at every precision and no thousands separator. `str()` and `isoformat()` are unchanged.
+- A `partial_date` template filter, loaded with `{% load partial_dates %}`, that gives the display
+  form in the active language. It renders empty text for an empty value and for anything that is not
+  a partial date, so `default` works after it, and its output is escaped. Django finds a tag library
+  through an installed app, so a project that uses the filter adds `"partial_dates"` to
+  `INSTALLED_APPS`. The app adds no model and needs no migration, and the Python route needs no
+  entry.
 - An `example/` project in the repository that serves a model form, a form with no model and the
   admin on localhost, with a command that seeds sign-ins and a sample at each precision. It is not
   part of the installed package.
