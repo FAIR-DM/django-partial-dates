@@ -72,8 +72,14 @@ it. Every project would then get the trap on its filter page or write the correc
 is the thing this feature exists to save. `PartialDateFilter(lookup_expr="lte")` stays available for
 a position.
 
-**ADR:** none. It is a filter's defined behaviour, and the spec and the guide state it. FS-003 is
-unchanged.
+The rule for an empty range follows from this. A range finds nothing only when its first bound sorts
+after the last day of the second bound's period, so `1991-03-15` to `1991-03` sorts backwards and
+still finds the rest of March, where FS-003's `range` finds nothing. The guide states the difference,
+and tests pin both sides of the rule.
+
+**ADR:** yes. This is the one place two public things called range answer differently on purpose,
+and someone will read it as a bug. An ADR is written in the build, on the same terms as ADR 0002,
+with its number claimed at merge. FS-003 is unchanged.
 
 ## D4 — Uncertain matches follow the sort order and are not made symmetrical
 

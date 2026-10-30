@@ -73,8 +73,13 @@ at each precision, on both databases, comparing the rows found with the tables i
    FR-005's table.
 4. **Given** the same filter, **When** only one of the two bounds is given, **Then** that bound
    alone applies.
-5. **Given** a first bound that sorts after the second, **When** the filter runs, **Then** it finds
-   nothing and reports no error, as FS-003's `range` does.
+5. **Given** a first bound that sorts after the last day of the second bound's period, such as
+   `1991-04` to `1991-03`, **When** the filter runs, **Then** it finds nothing and reports no error.
+   **Given** a first bound that sorts after the second but not after the last day of its period,
+   **Then** it finds the rows from the first bound to that last day: `1991-03-15` to `1991-03` finds
+   `1991-03-15` and `1991-03-31`, `1991-03-31` to `1991-03` finds `1991-03-31`, and `1991-06` to
+   `1991` finds `1991-06` and `1991-06-14`. None of them finds `1991` or a row before the first
+   bound.
 6. **Given** `PartialDateFilter(lookup_expr="year")`, and the same with `month` and `day`, **When**
    it is given a whole number, **Then** it finds the rows that lookup finds, so `month=6` leaves out
    `1990`, and a number no date can hold finds nothing.
@@ -209,7 +214,10 @@ read and write a value at each precision, an empty value, and each refused input
 - Q: Does a range follow FS-003's `range` lookup exactly? → A: No, on one point. FS-003's bound is a
   position, so `range` to `1991-03` leaves out `1991-03-15`. A person asking for a range up to March
   means all of March, so the upper bound takes in the last day of the period it names. A filter
-  declared with `lookup_expr="lte"` is the plain lookup and keeps its position.
+  declared with `lookup_expr="lte"` is the plain lookup and keeps its position. It follows that a
+  range finds nothing only when its first bound sorts after the last day of the second bound's
+  period, where FS-003's `range` finds nothing whenever the first bound sorts after the second. So
+  `1991-03-15` to `1991-03` finds nothing with the lookup and the rest of March with the filter.
 - Q: Does a filter make its uncertain matches symmetrical? → A: No. A range stays on the sort order
   of the ISO forms, so `1990` is left out of a range from `1990-06` and `1991` is in a range to
   `1991-03`. That is one rule, which a table shows, and it stays served by an index. A developer who
@@ -262,6 +270,10 @@ read and write a value at each precision, an empty value, and each refused input
   | `1991-04` | no | Sorts after that period |
   | no date | no | A row holding no date is never found by a bound |
 
+  A range MUST find nothing, and report no error, only when its first bound sorts after the last day
+  of the period of its second bound. `1991-03-15` to `1991-03` finds `1991-03-15` to `1991-03-31`,
+  and `1991-06` to `1991` finds `1991-06` to `1991-12-31`. `1991-04` to `1991-03` finds nothing.
+
 - **FR-006**: A range filter MUST apply both of its bounds to the same date when the field is
   reached across a relation.
 - **FR-007**: A filter taking a partial date MUST use the form field and the error codes of FS-004,
@@ -288,8 +300,10 @@ read and write a value at each precision, an empty value, and each refused input
 - **FR-013**: A developer's guide MUST cover installing each extra, every filter with its query
   parameters, and the serializer field, including when a `ModelSerializer` should declare it.
 - **FR-014**: The guide MUST state, filter by filter, which uncertain matches are included, with a
-  bound at each precision, as FS-003's guide does for lookups. The tests of every filter MUST cover
-  a row at each precision on both sides of each boundary.
+  bound at each precision, as FS-003's guide does for lookups. It MUST also state where the range
+  filter and FS-003's `range` lookup differ, and the rule for when a range finds nothing, with the
+  cases in FR-005. The tests of every filter MUST cover a row at each precision on both sides of
+  each boundary, and the tests of the range filter MUST cover both sides of that rule.
 - **FR-015**: Every filter MUST behave the same on PostgreSQL and SQLite, tested on both.
 - **FR-016**: Every message a person can read MUST be translatable.
 - **FR-017**: The example project MUST offer the range filter on its list of samples, so a developer
