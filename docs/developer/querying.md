@@ -381,7 +381,8 @@ The last group holds `1990-06`, which is in June of 1990 and has no day. Filter 
 
 ## Put dates on a date axis
 
-A chart axis needs real dates. `start` gives each partial date as the `datetime.date` its period
+A chart axis needs real dates. The field registers the transform `Start` from
+`partial_dates.lookups` as `start`, so you never import it. `start` gives each partial date as the `datetime.date` its period
 starts on: `1990` is 1 January 1990, `1990-06` is 1 June 1990, and `1990-06-14` is itself.
 
 ```python
