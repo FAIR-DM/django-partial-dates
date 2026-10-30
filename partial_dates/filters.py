@@ -161,8 +161,8 @@ class PartialDateFilter(django_filters.Filter):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        name, _separator, comparison = self.lookup_expr.partition(LOOKUP_SEP)
-        if name in PARTS and comparison in ("", *COMPARISONS):
+        name, separator, comparison = self.lookup_expr.partition(LOOKUP_SEP)
+        if name in PARTS and (not separator or comparison in COMPARISONS):
             self.field_class = forms.IntegerField
         elif self.lookup_expr not in COMPARISONS:
             raise ImproperlyConfigured(

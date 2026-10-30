@@ -801,18 +801,18 @@ class TestListPage:
     def test_offers_a_select_for_each_part_with_an_empty_choice(
         self, grid, get, name, part
     ):
-        _response, page = get()
+        page = get()[1]
 
         assert "" in page.selects[f"{name}_{part}"]["values"]
 
     def test_lists_every_record_including_one_holding_no_date(self, grid, get):
-        _response, page = get()
+        page = get()[1]
 
         assert len(page.rows) == len(grid)
         assert "" in page.rows
 
     def test_a_range_lists_the_stretch_to_the_end_of_the_last_month(self, grid, get):
-        _response, page = get(entered(after="1990", before="1990-06", name="when"))
+        page = get(entered(after="1990", before="1990-06", name="when"))[1]
 
         assert page.rows == [
             "1990",
@@ -849,7 +849,7 @@ class TestListPage:
         ],
     )
     def test_empty_parts_do_not_narrow(self, grid, get, query):
-        _response, page = get(query)
+        page = get(query)[1]
 
         assert len(page.rows) == len(grid)
 
@@ -899,7 +899,7 @@ class TestListPage:
         assert again.selects["when_before_day"]["selected"] == "1"
 
     def test_an_iso_address_shows_its_parts_selected(self, grid, get):
-        _response, page = get({"collected": "1990-06-14"})
+        page = get({"collected": "1990-06-14"})[1]
 
         assert page.selects["collected_year"]["selected"] == "1990"
         assert page.selects["collected_month"]["selected"] == "6"
@@ -916,7 +916,7 @@ class TestListPage:
         ],
     )
     def test_a_record_holding_no_date_is_left_out_once_narrowed(self, grid, get, query):
-        _response, page = get(query)
+        page = get(query)[1]
 
         assert page.rows
         assert "" not in page.rows

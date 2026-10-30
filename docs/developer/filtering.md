@@ -397,8 +397,9 @@ False
 ```
 
 A filter set drops an invalid filter and returns the rest when you read `qs`, so check
-`is_valid()` first, or use a view that does. django-filter's view and Django REST framework's
-filter backend both report the error to the client.
+`is_valid()` first, or use a view that does. django-filter's `FilterView` shows the error on the
+form and lists nothing, and with `strict = False` it lists what the other filters find. Django REST
+framework's filter backend responds with a client error naming the filter.
 
 ## Use the form field on its own
 

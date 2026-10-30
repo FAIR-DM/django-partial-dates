@@ -46,8 +46,8 @@ class PartialDateField(serializers.Field):
             The partial date the data names.
 
         Raises:
-            serializers.ValidationError: With code `invalid` for anything else, including an
-                empty string.
+            serializers.ValidationError: With code `invalid` for anything else,
+                including an empty string.
         """
         if isinstance(data, PartialDate):
             return data

@@ -77,9 +77,7 @@ after the last day of the second bound's period, so `1991-03-15` to `1991-03` so
 still finds the rest of March, where FS-003's `range` finds nothing. The guide states the difference,
 and tests pin both sides of the rule.
 
-**ADR:** yes. This is the one place two public things called range answer differently on purpose,
-and someone will read it as a bug. An ADR is written in the build, on the same terms as ADR 0002,
-with its number claimed at merge. FS-003 is unchanged.
+**ADR:** docs/adr/0003-a-range-filter-takes-in-the-whole-of-its-last-period.md
 
 ## D4 — Uncertain matches follow the sort order and are not made symmetrical
 
