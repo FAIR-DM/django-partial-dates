@@ -656,3 +656,34 @@ class TestMigrationTooling:
 
         assert operation.describe() != alteration.describe()
         assert operation.migration_name_fragment == "convert_thing_seen"
+
+
+@pytest.mark.django_db(transaction=True)
+class TestBareAlterField:
+    def test_generated_alteration_fails_on_a_table_with_rows_and_changes_nothing(
+        self,
+        build_state,
+        create_tables,
+        insert_rows,
+        apply_forwards,
+        read_column,
+        describe_column,
+    ):
+        state = build_state("bare_rows", {"seen": OldPartialDateField(null=True)})
+        create_tables(state)
+        insert_rows(
+            "bare_rows",
+            "seen",
+            ["1990-01-01 00:00:00", "1990-06-01 00:00:01", "1990-06-14 00:00:02"],
+        )
+        rows, column = (
+            read_column("bare_rows", "seen"),
+            describe_column("bare_rows", "seen"),
+        )
+        operation = migrations.AlterField("thing", "seen", PartialDateField(null=True))
+
+        with pytest.raises(DatabaseError):
+            apply_forwards(operation, state)
+
+        assert read_column("bare_rows", "seen") == rows
+        assert describe_column("bare_rows", "seen") == column
