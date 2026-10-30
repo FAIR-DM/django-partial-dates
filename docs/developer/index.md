@@ -19,3 +19,28 @@ a project from django-partial-date.
 - [Moving from django-partial-date](moving-from-django-partial-date.md): convert a column
   django-partial-date wrote, point your old migrations at a stand-in field, and correct the values
   the conversion refuses.
+
+```{toctree}
+:hidden:
+:caption: Getting started
+
+installation
+```
+
+```{toctree}
+:hidden:
+:caption: Working with partial dates
+
+querying
+forms
+showing
+filtering
+rest-framework
+```
+
+```{toctree}
+:hidden:
+:caption: Moving a project
+
+moving-from-django-partial-date
+```

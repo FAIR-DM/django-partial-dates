@@ -14,6 +14,8 @@
 A Django model field for dates that are known only to the year, to the month or to the day:
 `1990`, `1990-06` or `1990-06-14`.
 
+The documentation is at <https://django-partial-dates.fairdm.org>.
+
 ## Why
 
 Research records are full of dates nobody knows exactly. A sample was collected "in 1990", a
