@@ -2,6 +2,7 @@ import datetime
 import os
 import subprocess
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 import django_filters
@@ -745,3 +746,177 @@ class TestWithoutRestFramework:
         )
 
         assert result.returncode == 0, result.stderr
+
+
+class Page(HTMLParser):
+    """The selects and listed rows of a rendered filter page."""
+
+    def __init__(self, html):
+        super().__init__()
+        self.selects = {}
+        self.rows = []
+        self._select = None
+        self._row = None
+        self.feed(html)
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "select":
+            self._select = attrs["name"]
+            self.selects[self._select] = {"values": [], "selected": ""}
+        elif tag == "option" and self._select:
+            self.selects[self._select]["values"].append(attrs["value"])
+            if "selected" in attrs:
+                self.selects[self._select]["selected"] = attrs["value"]
+        elif tag == "li":
+            self._row = ""
+
+    def handle_endtag(self, tag):
+        if tag == "select":
+            self._select = None
+        elif tag == "li":
+            self.rows.append(self._row)
+            self._row = None
+
+    def handle_data(self, data):
+        if self._row is not None:
+            self._row += data
+
+
+NAMES = ["collected", "when_after", "when_before"]
+
+
+class TestListPage:
+    @pytest.fixture
+    def get(self, client):
+        def request(query=None):
+            response = client.get("/samples/", query or {})
+            assert response.status_code == 200
+            return response, Page(response.content.decode())
+
+        return request
+
+    @pytest.mark.parametrize("name", NAMES)
+    @pytest.mark.parametrize("part", ["year", "month", "day"])
+    def test_offers_a_select_for_each_part_with_an_empty_choice(
+        self, grid, get, name, part
+    ):
+        _response, page = get()
+
+        assert "" in page.selects[f"{name}_{part}"]["values"]
+
+    def test_lists_every_record_including_one_holding_no_date(self, grid, get):
+        _response, page = get()
+
+        assert len(page.rows) == len(grid)
+        assert "" in page.rows
+
+    def test_a_range_lists_the_stretch_to_the_end_of_the_last_month(self, grid, get):
+        _response, page = get(entered(after="1990", before="1990-06", name="when"))
+
+        assert page.rows == [
+            "1990",
+            "1990-05",
+            "1990-05-31",
+            "1990-06",
+            "1990-06-01",
+            "1990-06-14",
+        ]
+
+    def test_a_range_given_by_selects_lists_the_same_stretch(self, grid, get):
+        _response, page = get(
+            entered_by_parts(after="1990", before="1990-06", name="when")
+        )
+
+        assert "1990-06-14" in page.rows
+        assert "1990-07" not in page.rows
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            {},
+            {"collected": ""},
+            {"collected_year": "", "collected_month": "", "collected_day": ""},
+            {"when_after": "", "when_before": ""},
+            {
+                "when_after_year": "",
+                "when_after_month": "",
+                "when_after_day": "",
+                "when_before_year": "",
+                "when_before_month": "",
+                "when_before_day": "",
+            },
+        ],
+    )
+    def test_empty_parts_do_not_narrow(self, grid, get, query):
+        _response, page = get(query)
+
+        assert len(page.rows) == len(grid)
+
+    @pytest.mark.parametrize(
+        ("query", "code"),
+        [
+            ({"collected_day": "5"}, "incomplete"),
+            (
+                {
+                    "collected_year": "1990",
+                    "collected_month": "2",
+                    "collected_day": "30",
+                },
+                "invalid",
+            ),
+            ({"when_after_year": "1990", "when_after_day": "5"}, "incomplete"),
+            (
+                {
+                    "when_before_year": "1990",
+                    "when_before_month": "2",
+                    "when_before_day": "30",
+                },
+                "invalid",
+            ),
+        ],
+    )
+    def test_an_entry_that_makes_no_sense_is_reported_with_its_code(
+        self, grid, get, query, code
+    ):
+        response, _page = get(query)
+
+        errors = response.context["filter"].form.errors.as_data()
+        assert [error.code for found in errors.values() for error in found] == [code]
+
+    def test_the_address_of_a_narrowed_list_shows_the_same_rows_and_parts(
+        self, grid, get
+    ):
+        query = entered_by_parts(after="1990-05", before="1990-06-01", name="when")
+        _response, first = get(query)
+
+        _response, again = get(query)
+
+        assert again.rows == first.rows
+        assert again.rows != [str(sample.collected or "") for sample in grid]
+        assert again.selects["when_after_year"]["selected"] == "1990"
+        assert again.selects["when_after_month"]["selected"] == "5"
+        assert again.selects["when_before_day"]["selected"] == "1"
+
+    def test_an_iso_address_shows_its_parts_selected(self, grid, get):
+        _response, page = get({"collected": "1990-06-14"})
+
+        assert page.selects["collected_year"]["selected"] == "1990"
+        assert page.selects["collected_month"]["selected"] == "6"
+        assert page.selects["collected_day"]["selected"] == "14"
+        assert page.rows == ["1990-06-14"]
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            {"collected": "1990"},
+            {"collected_year": "1990"},
+            entered(after="0001", name="when"),
+            entered(before="9999", name="when"),
+        ],
+    )
+    def test_a_record_holding_no_date_is_left_out_once_narrowed(self, grid, get, query):
+        _response, page = get(query)
+
+        assert page.rows
+        assert "" not in page.rows

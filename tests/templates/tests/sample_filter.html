@@ -1,0 +1,7 @@
+<form method="get">
+  {{ filter.form.as_div }}
+  <button type="submit">Filter</button>
+</form>
+<ul id="results">
+  {% for sample in object_list %}<li>{{ sample.collected|default_if_none:"" }}</li>{% endfor %}
+</ul>
