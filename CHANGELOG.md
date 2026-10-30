@@ -21,6 +21,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   finds rows by exact match on a value or its text. The database refuses malformed text
   itself, by any route. `dumpdata` writes each value as its ISO form and each empty value as
   empty, and `loaddata` reads them back, in JSON, JSON Lines and XML.
+- Continuous integration runs the whole test suite on PostgreSQL 17, on Django 5.2 and 6.1,
+  alongside the SQLite matrix.
 - The package skeleton: packaging, continuous integration and the release flow.
 
 ### Changed
