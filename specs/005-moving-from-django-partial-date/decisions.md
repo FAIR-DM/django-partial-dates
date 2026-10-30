@@ -125,3 +125,30 @@ package adds no compatibility layer for them.
 This feature changes no screens, so no prototype is made.
 
 **ADR:** none.
+
+## D11 — The stand-in field reports `CharField` to Django's schema editor
+
+A generated `AlterField` left in place of the conversion would otherwise cut every PostgreSQL value
+to ten characters, and the check accepts the result, so `1990` would silently become `1990-01-01`.
+Reporting `CharField` removes the `USING` cast, and PostgreSQL then raises an error instead. It was
+measured on both databases (`research.md`). It is one method and it costs nothing else, because the
+field is only ever read from migration history.
+
+**ADR:** none — a detail of the stand-in field, recorded with it in the ADR that covers that field.
+
+## D12 — The middle step of the conversion is a plain `CharField`
+
+A subclass with no check would be a public name frozen into nothing. `models.CharField(max_length=10)`
+is the same column. Added from the design review.
+
+**ADR:** none — local to the operation.
+
+## D13 — The Python check is the guard against truncation
+
+The design review pointed out that the rewrite expression truncates a value that gets past the
+check, through the output of `sqlmigrate` or a row written between the check and the `ALTER`. An
+expression that raises on its own needs a different failure trick per database, for a route a
+developer has to choose. The guide says the output of `sqlmigrate` carries no check, and that
+writes stop during the move. Revisit if a project needs to move a table it cannot stop writing to.
+
+**ADR:** none — recorded here with its reason to revisit.

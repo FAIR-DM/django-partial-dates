@@ -19,8 +19,7 @@ asserts wording. No name starts with an underscore. Lines are at most 88 charact
   `tests/test_conversion.py`, class `TestOldPartialDateField`: creating a model with it gives the
   old column on each database (`timestamp with time zone`, `datetime`), a row written by raw SQL
   reads back and saves unchanged, and any `Field` option passes through `deconstruct()`
-- [ ] T002 [US1] `ConvertPartialDateField` forwards and `UncheckedPartialDateField`, with no refusal
-  yet, on the steps in `research.md`. Class `TestConversion`: each precision, `0990-03-01 00:00:01`,
+- [ ] T002 [US1] `ConvertPartialDateField` forwards, with no refusal yet, on the steps in `research.md`. Class `TestConversion`: each precision, `0990-03-01 00:00:01`,
   the earliest and latest dates (US-1 1–3), empty values (US-1 4), a required field stays required
   (US-1 5), a converted column compared with a new one, including its check, by raw SQL refused and
   accepted the same (US-1 6), `db_index`, `unique`, `Meta.indexes` and a unique constraint in place
@@ -30,8 +29,8 @@ asserts wording. No name starts with an underscore. Lines are at most 88 charact
   UTC, and `USE_TZ` off with a zone east of UTC and with one west of it, on a date before 1900 where
   the zone's offset has seconds (US-1 9). PostgreSQL's session zone is what varies, and on SQLite
   the test confirms settings do not matter
-- [ ] T004 [US1] `db_column`, `db_table`, several fields and several models in one migration through
-  `Migration.apply` (US-1 17), and a model the router excludes is left alone (edge case). Class
+- [ ] T004 [US1] `db_column`, a `db_table` holding a capital and a hyphen, several fields and several
+  models in one migration through `Migration.apply` (US-1 17), and a model the router excludes is left alone (edge case). Class
   `TestConversionTargets`
 
 ### Group 2
@@ -39,13 +38,17 @@ asserts wording. No name starts with an underscore. Lines are at most 88 charact
 - [ ] T005 [US1] Refusal and `RefusedValuesError`. Class `TestRefusal`, one parametrised test per
   kind: a time of day (US-1 10), seconds 3 to 59, a fraction of a second, year precision off 1 January, month
   precision off the first (US-1 11), and outside 0001–9999, `infinity` and a BC date on PostgreSQL, and
-  on SQLite impossible dates, non-timestamp text, a number, empty text and text with an offset
-  (US-1 12). Each asserts the column and every row are unchanged, and the error's model, field,
-  count, keys and values, by attribute (US-1 13). A migration with `atomic = False` leaves the
+  on SQLite impossible dates, `garbage`, a valid timestamp with trailing junk, a number, empty text
+  and text with an offset (US-1 12). Reading the bare column on SQLite turns these cases red: put
+  the mutation in the evidence. Each asserts the column and every row are unchanged, and the error's model, field,
+  count, keys and values, by attribute, with two refused rows written out of key order so the lowest
+  key comes first (US-1 13). A migration with `atomic = False` leaves the
   column unchanged (US-1 14), and correcting the row lets the migration complete (US-1 15)
 - [ ] T006 [US1] `database_backwards`. Class `TestBackwards`: stored values byte for byte, on a
   column that started as timestamps, including empty values, then forwards again, with an indexed
-  field and a unique one (US-1 16). On PostgreSQL the values compare as stored in a session zone
+  field and a unique one, and after the rollback the column's type, collation, nullability, indexes
+  and constraints compared with a table created from the stand-in with the same options, using
+  T002's helper (US-1 16). On PostgreSQL the values compare as stored in a session zone
   other than UTC as well
 - [ ] T007 [US1] An unsupported vendor (US-1 19), with a fake connection vendor. `reduce` returning
   `False`, through `MigrationOptimizer`, so a conversion followed by `AlterField` keeps both.
@@ -82,8 +85,8 @@ asserts wording. No name starts with an underscore. Lines are at most 88 charact
 - [ ] T013 [US2] `docs/developer/moving-from-django-partial-date.md` and the entry in
   `docs/developer/index.md`, covering FR-015, FR-016 and FR-017, the `AlterField` warning, the
   remedy for each kind of refused value, and a table of the old value class's names and their
-  replacements. Class `TestMovingGuide` in `tests/test_guide.py`: every Python block runs against
-  the package, and the steps name the test app's end state (US-2 9)
+  replacements. Class `TestMovingGuide` in `tests/test_guide.py`: each end-state block equals the
+  `tests/moving` file it names, and every other block not marked as a before-state runs (US-2 9)
 - [ ] T014 [US2] `README.md` and `docs/ROADMAP.md` (R5 delivered, with its issues). `docs/index.md` if
   it lists the guides
 

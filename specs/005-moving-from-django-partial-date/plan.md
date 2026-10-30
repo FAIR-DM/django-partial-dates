@@ -31,7 +31,6 @@ how-to guide, an ADR and a test app whose migrations follow the guide carry the 
 ```python
 class RefusedValuesError(Exception): ...        # refused values, with the error FR-007 asks for
 class OldPartialDateField(models.Field): ...    # the stand-in
-class UncheckedPartialDateField(PartialDateField): ...  # text column with no check, for SQLite
 class ConvertPartialDateField(migrations.AlterField): ...
 ```
 
@@ -43,23 +42,22 @@ class ConvertPartialDateField(migrations.AlterField): ...
 - `db_check()` returns `None`.
 - It takes every `Field` option, with no `max_length`, and writes values through unchanged.
 
-**`UncheckedPartialDateField`** overrides `db_check()` to return `None`. It is used only inside the
-operation, and is never written to a migration.
-
 **`ConvertPartialDateField`** subclasses `migrations.AlterField`, so it has the same arguments and
 state handling. `database_forwards`:
 
 1. Return if `allow_migrate_model` says no.
 2. Raise `django.db.NotSupportedError` on a vendor other than `postgresql` and `sqlite`.
-3. Unless `schema_editor.collect_sql`, read `pk` and the stored text, and raise
-   `RefusedValuesError` if any value is refused. The stored text is `col::timestamp::text` on
-   PostgreSQL and `col` on SQLite. A row with a `NULL` column is skipped.
+3. Unless `schema_editor.collect_sql`, read `pk` and the stored text ordered by primary key, and
+   raise `RefusedValuesError` if any value is refused. The stored text is `col::timestamp::text` on
+   PostgreSQL and `CAST(col AS TEXT)` on SQLite. A bare read of a `datetime` column on SQLite goes
+   through Django's converter, which gives `None` for junk text, so the cast is what lets a refused
+   value be seen. Only `NULL` is skipped. "The first" refused values are the lowest primary keys.
 4. Run the steps in `research.md` for the vendor.
 
 A stored value converts when it is text fully matching
-`(\d{4})-(\d{2})-(\d{2}) 00:00:0([012])`, the date is one `PartialDate(year, month, day)` accepts,
-and the seconds agree with it: 0 needs month and day 1, 1 needs day 1. A value that is not `str`,
-or that `PartialDate` refuses, is refused.
+`[0-9]{4}-[0-9]{2}-[0-9]{2} 00:00:0[012]`, the date is one `PartialDate(year, month, day)` accepts,
+and the seconds agree with it: 0 needs month and day 1, 1 needs day 1. A value that `PartialDate` refuses is
+refused. A number on SQLite casts to text that does not match.
 
 `RefusedValuesError` gives the model, the field, the count, and the primary key and stored value of
 the first 20.
@@ -86,12 +84,15 @@ PostgreSQL one `ALTER TABLE` dropping the check and changing the type to the tim
 `UPDATE`, and `alter_field` to the old field without indexes. Last, `alter_field(old without
 indexes, old)`. It reads no values and refuses none.
 
-The fields without indexes are clones with `db_index=False` and `unique=False`. The new field's
-clone keeps the old field's `null`, so `alter_field` makes any change of `null` in its last step.
-Both carry `name`, `column` and `model`.
+The old field without indexes is a clone with `db_index=False` and `unique=False`. The middle
+field is a `models.CharField(max_length=10)` with no index and the old field's `null`, so
+`alter_field` makes any change of `null` in its last step. Both carry `name`, `column` and `model`.
+The operation's helpers are `refused_values`, `old_without_indexes` and `plain_text_field`, with no
+leading underscore on any name.
 
-The check's name is `truncate_name(f"{table}_{column}_check", max_name_length)`, used to add and to
-drop it.
+The check's name is `truncate_name(f"{table}_{column}_check", max_name_length)`, passed through
+`quote_name`, used to add and to drop it. On a name over the database's limit it differs from the
+name PostgreSQL would give a new column, which changes nothing a developer sees.
 
 `reduce` returns `False`. `describe` and `migration_name_fragment` name the conversion.
 
@@ -100,8 +101,10 @@ are run with `params=None`.
 
 ### Documentation
 
-- `docs/developer/moving-from-django-partial-date.md`, the guide, covering FR-015 to FR-017 and the
-  `AlterField` warning, linked from `docs/developer/index.md`
+- `docs/developer/moving-from-django-partial-date.md`, the guide, covering FR-015 to FR-017, the
+  `AlterField` warning, that `sqlmigrate` output carries no check, that the conversion needs an
+  atomic migration for a failure after its first step to leave everything in place, and that a
+  change of `null` belongs in its own alteration, linked from `docs/developer/index.md`
 - `docs/adr/0002-*.md`, recording D2 and D5, with the rejected alternatives. The number is checked
   against origin/main when the branch is pushed
 - `CONTEXT.md`: **old column**, **conversion**, **refused value**, **stand-in field**
@@ -126,7 +129,10 @@ guide's end state. Each migration is a line in User Story 2:
 
 `tests/test_moving.py` migrates with `MigrationExecutor`: back to each step with raw rows, then
 forward, and compares schemas with a new database. `makemigrations --check` covers the app.
-`tests/test_guide.py` gains a class for the new guide: each Python block runs.
+`tests/test_guide.py` gains a class for the new guide. The guide's end-state migration and model
+blocks each name the `tests/moving` file they mirror, and the test asserts each block equals that
+file's text, so the guide and the test app are one source. Other Python blocks run, and blocks
+showing the state before the move are marked as not run.
 
 Every test runs on both databases through `TEST_DATABASE`, which is how the suite already works.
 
@@ -134,5 +140,5 @@ Every test runs on both databases through `TEST_DATABASE`, which is how the suit
 
 | Exception | Why |
 |---|---|
-| Raw SQL in a package | `alter_field` has no way to pass a `USING` (`research.md`). Table and column names go through `quote_name`, and no value is interpolated |
+| Raw SQL in a package | `alter_field` has no way to pass a `USING` (`research.md`). Table, column and constraint names go through `quote_name`, and no value is interpolated. There is no injection route. The check in Python is what guards against truncation, so the guide says the output of `sqlmigrate` carries no check and writes must stop during the move |
 | `get_internal_type()` that does not match the column | It is the one way to stop Django's alteration truncating values silently |

@@ -52,16 +52,20 @@ Three things the steps rest on:
 SQLite has no `ALTER COLUMN TYPE`. `alter_field` rebuilds the table, and `create_model`'s column
 definition carries the check, so a rebuild gives the right column.
 
+Reads need care. Django's SQLite connection parses a column declared `datetime` through a converter
+(`sqlite3/base.py:52`, `:163`), so a bare select returns `None` for `''` or junk text. `CAST(col AS
+TEXT)` returns what is stored. *Measured by the design review.*
+
 The order matters. *Reasoned from SQLite's affinity rules*: a column declared `datetime` has
 NUMERIC affinity, so writing `0990` to it stores the integer 990. The rows are rewritten after the
 rebuild into text affinity, and a rebuild with the check would refuse the old rows, so the middle
-step is a field with no check.
+step is a plain `CharField`.
 
 | Step | How |
 |---|---|
-| Rebuild to a text column with no check | `alter_field(old without indexes, unchecked)` |
+| Rebuild to a text column with no check | `alter_field(old without indexes, plain text field)` |
 | Rewrite the rows | One `UPDATE` |
-| Rebuild with the check and indexes | `alter_field(unchecked, new)` |
+| Rebuild with the check and indexes | `alter_field(plain text field, new)` |
 
 *Measured*: the table then matches a new one exactly, and migrating backwards restores every stored
 value on both databases.
