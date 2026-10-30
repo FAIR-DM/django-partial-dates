@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from django.db.models import F
+from django.db.models import Count, F
 
 from tests.factories import EventFactory, RecordFactory, SampleFactory
 from tests.models import Event, Record, Sample
@@ -75,6 +75,41 @@ class TestYear:
 
         assert list(Record.objects.filter(date__year=1990)) == [record]
         assert not Record.objects.filter(other__year=1990).exists()
+
+    def test_values_list_gives_the_year_of_every_date_and_none_for_no_date(self, grid):
+        result = Sample.objects.order_by("pk").values_list("collected__year", flat=True)
+
+        assert list(result) == [1990] * 7 + [1991, None]
+
+    def test_values_and_annotate_give_a_whole_number(self, grid):
+        values = Sample.objects.order_by("pk").values("collected__year")
+        annotated = Sample.objects.annotate(year=F("collected__year")).order_by("pk")
+
+        assert values[0] == {"collected__year": 1990}
+        assert [sample.year for sample in annotated] == [1990] * 7 + [1991, None]
+
+    def test_counts_grouped_by_year_include_every_row_with_a_date(self, grid):
+        counts = (
+            Sample.objects.values("collected__year")
+            .annotate(total=Count("pk"))
+            .order_by(F("collected__year").asc(nulls_last=True))
+        )
+
+        assert list(counts) == [
+            {"collected__year": 1990, "total": 7},
+            {"collected__year": 1991, "total": 1},
+            {"collected__year": None, "total": 1},
+        ]
+
+    def test_order_by_year_is_numeric(self, db):
+        for text in ["0990", "9999", "0001", "1990"]:
+            SampleFactory(collected=text)
+
+        result = Sample.objects.order_by("collected__year").values_list(
+            "collected__year", flat=True
+        )
+
+        assert list(result) == [1, 990, 1990, 9999]
 
 
 @pytest.mark.django_db
@@ -150,6 +185,45 @@ class TestMonth:
         assert list(Record.objects.filter(date__month=6)) == [record]
         assert not Record.objects.filter(other__month=6).exists()
 
+    def test_values_list_gives_the_month_and_none_where_it_is_unknown(self, grid):
+        result = Sample.objects.order_by("pk").values_list(
+            "collected__month", flat=True
+        )
+
+        assert list(result) == [None, 5, 5, 6, 6, 6, 7, None, None]
+
+    def test_annotate_gives_a_whole_number(self, grid):
+        annotated = Sample.objects.annotate(month=F("collected__month")).order_by("pk")
+
+        assert [sample.month for sample in annotated][:4] == [None, 5, 5, 6]
+
+    def test_counts_grouped_by_year_and_month_keep_a_year_out_of_every_month(
+        self, grid
+    ):
+        counts = (
+            Sample.objects.filter(collected__year=1990)
+            .values("collected__year", "collected__month")
+            .annotate(total=Count("pk"))
+            .order_by("collected__month")
+        )
+
+        assert {row["collected__month"]: row["total"] for row in counts} == {
+            None: 1,
+            5: 2,
+            6: 3,
+            7: 1,
+        }
+
+    def test_order_by_month_is_numeric_with_unknown_months_last(self, db):
+        for text in ["1990-10", "1990", "1990-02", "1990-09"]:
+            SampleFactory(collected=text)
+
+        result = Sample.objects.order_by(
+            F("collected__month").asc(nulls_last=True)
+        ).values_list("collected__month", flat=True)
+
+        assert list(result) == [2, 9, 10, None]
+
 
 @pytest.mark.django_db
 class TestDay:
@@ -194,6 +268,42 @@ class TestDay:
 
         assert list(Record.objects.filter(date__day=14)) == [record]
         assert not Record.objects.filter(other__day=14).exists()
+
+    def test_values_list_gives_the_day_and_none_where_it_is_unknown(self, grid):
+        result = Sample.objects.order_by("pk").values_list("collected__day", flat=True)
+
+        assert list(result) == [None, None, 31, None, 1, 14, None, None, None]
+
+    def test_annotate_gives_a_whole_number(self, grid):
+        annotated = Sample.objects.annotate(day=F("collected__day")).order_by("pk")
+
+        assert [sample.day for sample in annotated][2:6] == [31, None, 1, 14]
+
+    def test_counts_grouped_by_year_month_and_day_keep_a_month_out_of_every_day(
+        self, grid
+    ):
+        counts = (
+            Sample.objects.filter(collected__year=1990, collected__month=6)
+            .values("collected__year", "collected__month", "collected__day")
+            .annotate(total=Count("pk"))
+            .order_by(F("collected__day").asc(nulls_last=True))
+        )
+
+        assert [(row["collected__day"], row["total"]) for row in counts] == [
+            (1, 1),
+            (14, 1),
+            (None, 1),
+        ]
+
+    def test_order_by_day_is_numeric_with_unknown_days_last(self, db):
+        for text in ["1990-06-10", "1990-06", "1990-06-02", "1990-06-09"]:
+            SampleFactory(collected=text)
+
+        result = Sample.objects.order_by(
+            F("collected__day").asc(nulls_last=True)
+        ).values_list("collected__day", flat=True)
+
+        assert list(result) == [2, 9, 10, None]
 
 
 NAMES_AN_INDEX = re.compile(r"\bindex\b", re.IGNORECASE)
