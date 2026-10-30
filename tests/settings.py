@@ -10,6 +10,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.sessions",
     "reversion",
+    "partial_dates",
     "tests",
     "tests.moving",
 ]

@@ -115,6 +115,7 @@ non-mirror-paths = [
     "tests/test_models.py",
     "tests/migrations/",
     "tests/fixtures/",
+    "tests/formats/",
     "tests/conftest.py",
     "tests/admin.py",
     "tests/test_admin.py",

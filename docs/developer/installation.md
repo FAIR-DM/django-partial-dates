@@ -11,7 +11,10 @@ Install `django-partial-dates` into the environment your project runs in.
 $ pip install django-partial-dates
 ```
 
-The package has no app to add to `INSTALLED_APPS`. It brings in Django and nothing else.
+The field, the form field, the lookups and `PartialDate.display_form()` need no entry in
+`INSTALLED_APPS`. Only the template filter does, because Django finds a tag library through an
+installed app. [Showing a partial date](showing.md) says how to add it. The package brings in
+Django and nothing else, and its app adds no model and needs no migration.
 
 To filter a list of records with django-filter, install the extra instead:
 `pip install "django-partial-dates[django-filter]"`. The [filtering guide](filtering.md) covers

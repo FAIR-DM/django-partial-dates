@@ -13,6 +13,8 @@ holds a part nobody gave.
   or by one of its parts, and put them on a date axis with `start`.
 - [Enter a partial date](developer/forms.md) in a model form, the admin or a plain form, with a
   year, a month and a day select, giving as much of the date as the user knows.
+- [Show a partial date](developer/showing.md) to a reader at the precision it was recorded, in
+  the language of the page, in a template, in Python and in the admin.
 - [Filter a list of records](developer/filtering.md) by a date or a range of dates with
   django-filter, giving a person the selects and an API client the ISO form, and knowing which
   uncertain dates each filter includes.

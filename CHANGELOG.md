@@ -52,9 +52,29 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PartialDateWidget(years=...)` names others for one field. The years offered limit nothing: a
   stored year the list does not hold is added to it, and any year a `PartialDate` accepts is
   accepted.
+- `PartialDate.display_form()`, the text a reader should see for a partial date, in the language
+  active when it is called. A year reads as a year, a month as Django's `YEAR_MONTH_FORMAT` and a
+  day as its `DATE_FORMAT`, so no month or day that nobody recorded appears. The year has four
+  digits at every precision and no thousands separator. `str()` and `isoformat()` are unchanged.
+- A `partial_date` template filter, loaded with `{% load partial_dates %}`, that gives the display
+  form in the active language. It renders empty text for an empty value and for anything that is not
+  a partial date, so `default` works after it, and its output is escaped. Django finds a tag library
+  through an installed app, so a project that uses the filter adds `"partial_dates"` to
+  `INSTALLED_APPS`. The app adds no model and needs no migration, and the Python route needs no
+  entry.
+- `partial_dates.admin.PartialDateDisplayMixin`, which an admin class or an inline names before
+  `ModelAdmin`, `TabularInline` or `StackedInline` to show its partial date fields as their
+  display form. A column in `list_display` keeps its heading, its sorting by the stored order and
+  its link to the row, a field in `list_editable` keeps its selects, and a field in
+  `readonly_fields` keeps its label, and its help text except in a tabular inline. A page a user may only view, and an inline they
+  may only view, show every partial date as the display form, and a field the admin leaves out
+  stays off the page. An empty value shows the admin's empty display. A field reached through a
+  relation, a method and an admin with no mixin keep the ISO form. It needs no `INSTALLED_APPS`
+  entry, and `django.contrib.admin` stays optional.
 - An `example/` project in the repository that serves a model form, a form with no model and the
-  admin on localhost, with a command that seeds sign-ins and a sample at each precision. It is not
-  part of the installed package.
+  admin on localhost, with a command that seeds sign-ins, including a view-only one, and a sample
+  at each precision. Its admin and its list page show the display form, in English, German and
+  Japanese. It is not part of the installed package.
 - `ConvertPartialDateField`, a migration operation that converts a column written by
   django-partial-date into a `PartialDateField` in place, on PostgreSQL and SQLite. It takes the
   arguments of Django's `AlterField`, so the only edit to the migration Django generates is the

@@ -17,6 +17,7 @@ GUIDE = ROOT / "docs" / "developer" / "querying.md"
 MOVING_GUIDE = ROOT / "docs" / "developer" / "moving-from-django-partial-date.md"
 FORMS_GUIDE = GUIDE.parent / "forms.md"
 FILTERING_GUIDE = GUIDE.parent / "filtering.md"
+SHOWING_GUIDE = GUIDE.parent / "showing.md"
 FENCED_PYTHON = re.compile(r"^```python\n(.*?)^```", re.DOTALL | re.MULTILINE)
 LISTED_ROWS = re.compile(r"^for text in (\[.*?\]):$", re.DOTALL | re.MULTILINE)
 GUIDE_BLOCK = re.compile(
@@ -65,6 +66,24 @@ class TestFormsExamples:
         parser = doctest.DocTestParser()
         test = parser.get_doctest(
             "\n".join(blocks), {"Record": Record}, "forms", str(FORMS_GUIDE), 0
+        )
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
+        report = []
+
+        results = runner.run(test, out=report.append, clear_globs=False)
+
+        assert results.attempted > 0
+        assert results.failed == 0, "".join(report)
+
+
+class TestShowingExamples:
+    def test_every_example_on_the_showing_page_runs_and_prints_what_it_shows(self):
+        blocks = FENCED_PYTHON.findall(SHOWING_GUIDE.read_text())
+        parser = doctest.DocTestParser()
+        test = parser.get_doctest(
+            "\n".join(blocks), {}, "showing", str(SHOWING_GUIDE), 0
         )
         runner = doctest.DocTestRunner(
             optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL

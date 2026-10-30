@@ -7,7 +7,14 @@ import re
 from dataclasses import dataclass
 from typing import Self
 
+from django.utils.formats import date_format
+
 ISO_FORM = re.compile(r"([0-9]{4})(?:-([0-9]{2})(?:-([0-9]{2}))?)?")
+DISPLAY_FORMATS = {
+    "year": "Y",
+    "month": "YEAR_MONTH_FORMAT",
+    "day": "DATE_FORMAT",
+}
 
 
 class Precision(enum.StrEnum):
@@ -112,6 +119,19 @@ class PartialDate:
         if self.day is not None:
             text += f"-{self.day:02d}"
         return text
+
+    def display_form(self) -> str:
+        """Return the date as the active language writes it, at its own precision.
+
+        A year is written by Django's ``Y`` format, a month by ``YEAR_MONTH_FORMAT``
+        and a day by ``DATE_FORMAT``, each for the language active when this is
+        called. No part that was not recorded appears. Calling this needs Django's
+        settings to be configured.
+
+        Returns:
+            The year, the month and year, or the full date, as text for a reader.
+        """
+        return date_format(self.start, DISPLAY_FORMATS[self.precision])
 
     def __str__(self) -> str:
         """Return the ISO form of the date."""

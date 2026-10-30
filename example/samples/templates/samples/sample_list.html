@@ -1,4 +1,5 @@
 {% extends "samples/base.html" %}
+{% load partial_dates %}
 {% block content %}
 <h1>Samples</h1>
 <form method="get">
@@ -8,9 +9,9 @@
 <ul>
   {% for sample in object_list %}
     <li>
-      <a href="{% url 'sample-change' sample.pk %}">{{ sample }}</a>
-      (published: {{ sample.published|default_if_none:"not recorded" }},
-      catalogued: {{ sample.catalogued }})
+      <a href="{% url 'sample-change' sample.pk %}">collected {{ sample.collected|partial_date }}</a>
+      (published: {{ sample.published|partial_date|default:"not recorded" }},
+      catalogued: {{ sample.catalogued|partial_date }})
     </li>
   {% empty %}
     <li>No samples yet. Run <code>seed</code> to add some.</li>
