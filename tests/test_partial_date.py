@@ -496,3 +496,20 @@ class TestDisplayForm:
         with translation.override("xx"):
             assert value.display_form() == date_format(value.start, name)
 
+
+class TestDisplayFormNamesOnlyRecordedParts:
+    @pytest.mark.parametrize("language", [code for code, _ in settings.LANGUAGES])
+    def test_a_year_reads_the_same_on_its_first_and_its_last_day(self, language):
+        with translation.override(language):
+            text = PartialDate(1990).display_form()
+
+            assert text == date_format(datetime.date(1990, 1, 1), "Y")
+            assert text == date_format(datetime.date(1990, 12, 31), "Y")
+
+    @pytest.mark.parametrize("language", [code for code, _ in settings.LANGUAGES])
+    def test_a_month_reads_the_same_on_its_first_and_its_last_day(self, language):
+        with translation.override(language):
+            text = PartialDate(1990, 6).display_form()
+
+            assert text == date_format(datetime.date(1990, 6, 1), "YEAR_MONTH_FORMAT")
+            assert text == date_format(datetime.date(1990, 6, 30), "YEAR_MONTH_FORMAT")
