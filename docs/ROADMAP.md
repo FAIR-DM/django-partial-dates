@@ -109,7 +109,7 @@ The breadth that makes the package dependable rather than merely usable.
 
 ### R6 — Showing a partial date to a reader
 
-*feature · advances G7*
+*delivered in [#31](https://github.com/FAIR-DM/django-partial-dates/pull/31) · advances G7*
 
 A year-only date shown as "1 January 1990" is the false certainty this package exists to avoid,
 and it is easy to do by accident in a template. FairDM's `format_partial_date()` is the shape to

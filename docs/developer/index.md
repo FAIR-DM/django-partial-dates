@@ -11,7 +11,7 @@ from django-partial-date.
 - [Entering a partial date](forms.md): use the form field in a model form, the admin or a plain
   form, name the years it offers, and learn what the user sees and what each error means.
 - [Showing a partial date](showing.md): get the text a reader sees, at the precision it was
-  recorded and in the active language.
+  recorded and in the active language, from a template, from Python and in the admin.
 - [Moving from django-partial-date](moving-from-django-partial-date.md): convert a column
   django-partial-date wrote, point your old migrations at a stand-in field, and correct the values
   the conversion refuses.

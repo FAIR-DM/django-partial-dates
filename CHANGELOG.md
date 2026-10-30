@@ -62,9 +62,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   through an installed app, so a project that uses the filter adds `"partial_dates"` to
   `INSTALLED_APPS`. The app adds no model and needs no migration, and the Python route needs no
   entry.
+- `partial_dates.admin.PartialDateDisplayMixin`, which an admin class or an inline names before
+  `ModelAdmin`, `TabularInline` or `StackedInline` to show its partial date fields as their
+  display form. A column in `list_display` keeps its heading, its sorting by the stored order and
+  its link to the row, a field in `list_editable` keeps its selects, and a field in
+  `readonly_fields` keeps its label and help text. A page a user may only view, and an inline they
+  may only view, show every partial date as the display form, and a field the admin leaves out
+  stays off the page. An empty value shows the admin's empty display. A field reached through a
+  relation, a method and an admin with no mixin keep the ISO form. It needs no `INSTALLED_APPS`
+  entry, and `django.contrib.admin` stays optional.
 - An `example/` project in the repository that serves a model form, a form with no model and the
-  admin on localhost, with a command that seeds sign-ins and a sample at each precision. It is not
-  part of the installed package.
+  admin on localhost, with a command that seeds sign-ins, including a view-only one, and a sample
+  at each precision. Its admin and its list page show the display form, in English, German and
+  Japanese. It is not part of the installed package.
 - `ConvertPartialDateField`, a migration operation that converts a column written by
   django-partial-date into a `PartialDateField` in place, on PostgreSQL and SQLite. It takes the
   arguments of Django's `AlterField`, so the only edit to the migration Django generates is the

@@ -12,6 +12,7 @@ SIGN_INS = {
     "regular.user": {},
     "staff.user": {"is_staff": True},
     "super.user": {"is_staff": True, "is_superuser": True},
+    "view-only.user": {"is_staff": True},
 }
 SAMPLES = [
     PartialDate(2024),
@@ -38,6 +39,7 @@ class Command(BaseCommand):
             content_type__app_label="samples",
             content_type__model__in=["sample", "note"],
         )
+        view_permissions = permissions.filter(codename__startswith="view_")
         for username, flags in SIGN_INS.items():
             user, _ = User.objects.update_or_create(
                 username=username,
@@ -47,6 +49,8 @@ class Command(BaseCommand):
             user.save()
             if username == "staff.user":
                 user.user_permissions.set(permissions)
+            if username == "view-only.user":
+                user.user_permissions.set(view_permissions)
         for collected in SAMPLES:
             Sample.objects.get_or_create(collected=collected)
         first = Sample.objects.get(collected=SAMPLES[0])

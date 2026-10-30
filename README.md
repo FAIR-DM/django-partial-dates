@@ -256,6 +256,10 @@ In a template, add `"partial_dates"` to `INSTALLED_APPS`, then `{% load partial_
 write `{{ value|partial_date }}`. An empty value renders as empty text. The method needs no app
 entry.
 
+In the admin, put `PartialDateDisplayMixin` from `partial_dates.admin` before `ModelAdmin` or an
+inline in the bases, and a list, a read-only field and a page a user may only view show the display
+form. It needs no app entry.
+
 `str()` and `isoformat()` still give the ISO form in every language. The
 [showing guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/showing.md)
 shows other languages and says what each precision uses.
