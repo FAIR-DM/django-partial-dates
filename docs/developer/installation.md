@@ -15,7 +15,9 @@ The package has no app to add to `INSTALLED_APPS`. It brings in Django and nothi
 
 To filter a list of records with django-filter, install the extra instead:
 `pip install "django-partial-dates[django-filter]"`. The [filtering guide](filtering.md) covers
-the filters it adds.
+the filters it adds. To expose a partial date through Django REST framework, install the
+`djangorestframework` extra: `pip install "django-partial-dates[djangorestframework]"`. The
+[Django REST framework guide](rest-framework.md) covers the serializer field it adds.
 
 ## Add the field to a model
 

@@ -16,6 +16,9 @@ holds a part nobody gave.
 - [Filter a list of records](developer/filtering.md) by a date or a range of dates with
   django-filter, giving a person the selects and an API client the ISO form, and knowing which
   uncertain dates each filter includes.
+- [Expose a partial date through an API](developer/rest-framework.md) with a Django REST
+  framework serializer field that reads and writes the ISO form and reports anything else as a
+  validation error.
 - [Move from django-partial-date](developer/moving-from-django-partial-date.md) with a migration
   that converts the column in place and loses no value.
 
@@ -25,6 +28,7 @@ holds a part nobody gave.
 - Django 5.2 or later
 - PostgreSQL or SQLite
 - django-filter 26.2 or later, only for the `django-filter` extra
+- Django REST framework 3.18 or later, only for the `djangorestframework` extra
 
 ## Installation
 

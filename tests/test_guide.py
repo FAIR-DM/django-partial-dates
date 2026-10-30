@@ -10,7 +10,7 @@ import pytest
 from partial_dates import PartialDate
 from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
 from tests.factories import SampleFactory
-from tests.models import Note, Record, Sample
+from tests.models import Event, Note, Record, Sample
 
 ROOT = Path(__file__).parent.parent
 GUIDE = ROOT / "docs" / "developer" / "querying.md"
@@ -280,3 +280,26 @@ class TestMovingGuide:
         assert runnable
         for code in runnable:
             exec(compile(code, str(MOVING_GUIDE), "exec"), {})  # noqa: S102
+
+
+REST_FRAMEWORK_GUIDE = GUIDE.parent / "rest-framework.md"
+
+
+class TestRestFrameworkExamples:
+    @pytest.mark.django_db
+    def test_every_example_on_the_page_runs_and_prints_what_it_shows(self):
+        blocks = FENCED_PYTHON.findall(REST_FRAMEWORK_GUIDE.read_text())
+        parser = doctest.DocTestParser()
+        names = {"Sample": Sample, "Event": Event}
+        test = parser.get_doctest(
+            "\n".join(blocks), names, "rest-framework", str(REST_FRAMEWORK_GUIDE), 0
+        )
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
+        report = []
+
+        results = runner.run(test, out=report.append, clear_globs=False)
+
+        assert results.attempted > 0
+        assert results.failed == 0, "".join(report)

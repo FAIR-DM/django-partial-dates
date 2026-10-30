@@ -64,7 +64,8 @@ $ pip install "django-partial-dates[django-filter]"
 
 The extra adds django-filter and nothing else. Your project needs no entry in
 `INSTALLED_APPS` for these filters. Installing it does not install Django REST framework, and
-the filters never import it.
+the filters never import it. To serialize a partial date in an API, see the
+[Django REST framework guide](rest-framework.md).
 
 ## Filter on one date
 

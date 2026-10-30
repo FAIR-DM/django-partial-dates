@@ -77,6 +77,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PartialDateFilter` in `Meta.filter_overrides` lets `Meta.fields` name it. Nothing imports
   Django REST framework.
 - A guide to filtering with django-filter that states which uncertain dates each filter includes.
+- `PartialDateField` in `partial_dates.rest_framework`, a serializer field for Django REST
+  framework, installed with the `djangorestframework` extra. It writes a `PartialDate` as its ISO
+  form and no date as `null`, reads an ISO form or a `PartialDate`, and refuses anything else,
+  including an empty string, with the code `invalid`. Its other options behave as on any
+  Django REST framework field. Nothing imports django-filter.
+- A guide to exposing a partial date through Django REST framework, including how to require a
+  date on a `ModelSerializer`.
 - The developer guide: installation, a page on entering a partial date in a form, in a model form
   and in the admin, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a
