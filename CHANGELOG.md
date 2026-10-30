@@ -53,6 +53,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - An `example/` project in the repository that serves a model form, a form with no model and the
   admin on localhost, with a command that seeds sign-ins and a sample at each precision. It is not
   part of the installed package.
+- `ConvertPartialDateField`, a migration operation that converts a column written by
+  django-partial-date into a `PartialDateField` in place, on PostgreSQL and SQLite. It takes the
+  arguments of Django's `AlterField`, so the only edit to the migration Django generates is the
+  name of the operation. Every value becomes the ISO form at the precision its seconds recorded,
+  and every empty value stays empty. The operation converts a value only when it is exactly what
+  django-partial-date writes. Otherwise it raises `RefusedValuesError`, naming the model, the
+  field, the number of refused values and the primary key and stored value of the first 20,
+  before anything has changed. Migrating backwards restores the old column and every stored value.
+- `OldPartialDateField`, a field that existing migrations use in place of django-partial-date's,
+  so they describe the same column and a project can uninstall that package.
+- A guide to moving from django-partial-date.
 - The developer guide: installation, a page on entering a partial date in a form, in a model form
   and in the admin, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a

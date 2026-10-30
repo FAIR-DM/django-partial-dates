@@ -101,6 +101,7 @@ extend_exclude = ["tests/", "docs/", "example/"]
 non-mirror-paths = [
     "tests/test_init.py",
     "tests/test_guide.py",
+    "tests/test_moving.py",
     "tests/models.py",
     "tests/test_models.py",
     "tests/migrations/",

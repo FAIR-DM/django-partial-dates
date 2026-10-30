@@ -10,6 +10,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.sessions",
     "tests",
+    "tests.moving",
 ]
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",

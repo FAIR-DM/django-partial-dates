@@ -90,7 +90,7 @@ configuration.
 
 ### R5 — Moving from django-partial-date
 
-*feature · advances G5*
+*delivered in [#20](https://github.com/FAIR-DM/django-partial-dates/issues/20), [#25](https://github.com/FAIR-DM/django-partial-dates/issues/25), [#26](https://github.com/FAIR-DM/django-partial-dates/issues/26) · advances G5*
 
 django-partial-date stores a timestamp with the precision in its seconds. Every project moving
 over needs to turn that into the ISO form without losing a value, and FAIR-DM has two packages
