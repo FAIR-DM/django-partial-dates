@@ -382,8 +382,9 @@ The last group holds `1990-06`, which is in June of 1990 and has no day. Filter 
 ## Put dates on a date axis
 
 A chart axis needs real dates. The field registers the transform `Start` from
-`partial_dates.lookups` as `start`, so you never import it. `start` gives each partial date as the `datetime.date` its period
-starts on: `1990` is 1 January 1990, `1990-06` is 1 June 1990, and `1990-06-14` is itself.
+`partial_dates.lookups` as `start`, so you never import it. `start` gives each partial date as the
+`datetime.date` its period starts on: `1990` is 1 January 1990, `1990-06` is 1 June 1990, and
+`1990-06-14` is itself.
 
 ```python
 >>> [
@@ -508,9 +509,9 @@ same on both.
 ## Which queries use an index
 
 When the column has an index, a range filter such as `gte` with `lte`, a filter on one year
-with `year=1990`, and ordering by the field itself use it on PostgreSQL and SQLite. Filters on `month` and `day`, and comparisons
-of `year` other than equality, read the whole table. "June of any year" is the usual example.
-Whether a column has an index stays your decision.
+with `year=1990`, and ordering by the field itself use it on PostgreSQL and SQLite. Filters on
+`month` and `day`, and comparisons of `year` other than equality, read the whole table. "June of
+any year" is the usual example. Whether a column has an index stays your decision.
 
 A filter on one year uses the index because `YearExact`, the `exact` lookup of `Year`, compares
 the stored text with the year's first and last possible text, `1990` and `1990-99`, instead of

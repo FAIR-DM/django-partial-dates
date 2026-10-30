@@ -189,3 +189,14 @@ US-1 has six tasks and US-2 five, each on one concern.
   scoped.
 
 **ADR:** none — corrections to this feature's plan.
+
+## D20 — Choices made during the build
+
+- The guide names the classes `Year`, `Month`, `Day`, `Start` and `YearExact` in prose, and says a
+  developer never imports them, because the documentation check counts them as public names.
+- The repository has no code of conduct, so the homepage's support section links the issue tracker
+  only, where `documentation.md` asks for both.
+- `tests/test_guide.py` reads only tables with a `Row` column. The table of what each part gives is
+  proved by the tests in `tests/test_lookups.py` instead.
+
+**ADR:** none — local to this feature's documentation.
