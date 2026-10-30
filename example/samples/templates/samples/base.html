@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Partial dates example</title>
+</head>
+<body>
+  <nav>
+    <a href="{% url 'sample-list' %}">Samples</a>
+    <a href="{% url 'sample-add' %}">Add a sample</a>
+    <a href="{% url 'plain-form' %}">Plain form</a>
+    <a href="{% url 'admin:index' %}">Admin</a>
+  </nav>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

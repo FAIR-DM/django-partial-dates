@@ -1,0 +1,12 @@
+{% extends "samples/base.html" %}
+{% block content %}
+<h1>A form with no model</h1>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_div }}
+  <button type="submit">Clean</button>
+</form>
+{% if cleaned %}
+  <p>Cleaned to: <code>{{ form.cleaned_data.when|default_if_none:"None" }}</code></p>
+{% endif %}
+{% endblock %}
