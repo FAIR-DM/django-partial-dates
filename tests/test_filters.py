@@ -1,7 +1,10 @@
+import datetime
+
 import django_filters
 import pytest
 from django.core.exceptions import ImproperlyConfigured
 
+from partial_dates.fields import PartialDateField
 from partial_dates.filters import PartialDateFilter
 from tests.models import Sample
 
@@ -220,3 +223,91 @@ class TestPartFilters:
     def test_a_lookup_outside_the_list_raises(self, lookup):
         with pytest.raises(ImproperlyConfigured):
             PartialDateFilter(lookup_expr=lookup)
+
+
+class TestGeneratedFilters:
+    @pytest.fixture
+    def generated(self):
+        def build(lookups):
+            meta = type(
+                "Meta",
+                (),
+                {
+                    "model": Sample,
+                    "fields": {"collected": lookups},
+                    "filter_overrides": {
+                        PartialDateField: {"filter_class": PartialDateFilter}
+                    },
+                },
+            )
+            return type("GeneratedFilter", (django_filters.FilterSet,), {"Meta": meta})
+
+        return build
+
+    @pytest.mark.parametrize("lookup", ["exact", "gt", "gte", "lt", "lte"])
+    @pytest.mark.parametrize("bound", BOUNDS)
+    def test_a_comparison_works(self, grid, found, generated, lookup, bound):
+        filterset = generated([lookup])
+        name = "collected" if lookup == "exact" else f"collected__{lookup}"
+
+        applied = filterset({name: bound}, queryset=Sample.objects.all())
+
+        plain = Sample.objects.filter(**{f"collected__{lookup}": bound})
+        assert isinstance(filterset.base_filters[name], PartialDateFilter)
+        assert found(applied.qs) == found(plain)
+
+    @pytest.mark.parametrize(
+        ("part", "number"), [("year", 1990), ("month", 6), ("day", 14)]
+    )
+    def test_a_part_works(self, grid, found, generated, part, number):
+        filterset = generated([part])
+
+        applied = filterset(
+            {f"collected__{part}": str(number)}, queryset=Sample.objects.all()
+        )
+
+        plain = Sample.objects.filter(**{f"collected__{part}": number})
+        assert found(applied.qs) == found(plain)
+        assert found(applied.qs) != []
+
+    @pytest.mark.parametrize("value", ["true", "false"])
+    def test_isnull_works(self, grid, found, generated, value):
+        filterset = generated(["isnull"])
+
+        applied = filterset({"collected__isnull": value}, queryset=Sample.objects.all())
+
+        plain = Sample.objects.filter(collected__isnull=value == "true")
+        assert found(applied.qs) == found(plain)
+
+    @pytest.mark.parametrize("lookup", ["in", "range"])
+    def test_naming_a_list_lookup_raises_when_the_class_is_defined(
+        self, generated, lookup
+    ):
+        with pytest.raises(ImproperlyConfigured):
+            generated([lookup])
+
+
+class TestOfferedYears:
+    @pytest.fixture
+    def offered(self, run):
+        def years(**kwargs):
+            applied = run({}, collected=PartialDateFilter(**kwargs))
+            widget = applied.form.fields["collected"].widget
+            context = widget.get_context("collected", None, {})
+            select = context["widget"]["subwidgets"][0]
+            return [
+                str(option["value"])
+                for _group, options, _index in select["optgroups"]
+                for option in options
+            ]
+
+        return years
+
+    def test_the_filter_offers_the_years_it_is_given(self, offered):
+        assert offered(years=[2001, 1999, 2003]) == ["", "2001", "1999", "2003"]
+
+    def test_the_filter_offers_the_default_years_with_none_given(self, offered):
+        shown = offered()
+
+        assert shown[1] == str(datetime.date.today().year)
+        assert shown[-1] == "1900"
