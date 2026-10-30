@@ -10,6 +10,7 @@ from tests.models import Sample
 
 GUIDE = Path(__file__).parent.parent / "docs" / "developer" / "querying.md"
 FENCED_PYTHON = re.compile(r"^```python\n(.*?)^```", re.DOTALL | re.MULTILINE)
+LISTED_ROWS = re.compile(r"^for text in (\[.*?\]):$", re.DOTALL | re.MULTILINE)
 NO_DATE = "no date"
 
 
@@ -26,7 +27,9 @@ class TestExamples:
             str(GUIDE),
             0,
         )
-        runner = doctest.DocTestRunner(optionflags=doctest.NORMALIZE_WHITESPACE)
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
         report = []
 
         results = runner.run(test, out=report.append, clear_globs=False)
@@ -34,9 +37,15 @@ class TestExamples:
         assert results.attempted > 0
         assert results.failed == 0, "".join(report)
 
+    def test_the_rows_the_guide_lists_are_the_rows_its_examples_run_against(
+        self, guide_samples
+    ):
+        listed = ast.literal_eval(LISTED_ROWS.search(GUIDE.read_text()).group(1))
+
+        assert listed == [sample.collected for sample in guide_samples]
+
 
 def parse_tables(text):
-    """Return each markdown table in the text as a list of rows of cells."""
     tables, current = [], []
     for line in text.splitlines():
         if line.startswith("|"):
@@ -56,7 +65,6 @@ def unquote(cell):
 
 
 def stated_results():
-    """Yield one case for each yes or no a result table states."""
     cases = []
     for table in parse_tables(GUIDE.read_text()):
         header = [unquote(cell) for cell in table[0]]

@@ -1,5 +1,4 @@
 import datetime
-import re
 
 import pytest
 from django.db.models import Count, F
@@ -157,12 +156,6 @@ class TestMonth:
             "1990-07",
         ]
 
-    def test_exclude_month_leaves_out_a_date_whose_month_is_unknown(self, grid, found):
-        result = found(Sample.objects.exclude(collected__month=6))
-
-        assert "1990" not in result
-        assert "1991" not in result
-
     def test_exclude_month_returns_other_months_and_the_row_holding_no_date(
         self, grid, found
     ):
@@ -308,25 +301,8 @@ class TestDay:
         assert list(result) == [2, 9, 10, None]
 
 
-STARTS = [
-    "0001",
-    "1990",
-    "1990-01",
-    "1990-01-01",
-    "1990-06",
-    "1990-06-01",
-    "1990-06-14",
-    "2000-02-29",
-    "9999-12-31",
-]
-
-
 @pytest.mark.django_db
 class TestStart:
-    @pytest.fixture
-    def starts(self, db):
-        return [SampleFactory(collected=text) for text in [*STARTS, None]]
-
     def test_values_list_gives_the_start_of_the_value_and_none_for_no_date(
         self, starts
     ):
@@ -335,7 +311,10 @@ class TestStart:
         )
 
         assert list(result) == [
-            *(PartialDate.fromisoformat(text).start for text in STARTS),
+            *(
+                PartialDate.fromisoformat(sample.collected).start
+                for sample in starts[:-1]
+            ),
             None,
         ]
 
@@ -418,12 +397,16 @@ class TestStart:
             Sample.objects.filter(collected__start__lte=datetime.date(9999, 12, 31))
         )
 
-    def test_order_by_start_with_the_field_second_gives_a_stable_order(self, starts):
-        result = Sample.objects.order_by(
-            F("collected__start").asc(nulls_last=True), "collected"
+    def test_order_by_start_with_the_field_second_gives_a_stable_order(
+        self, starts, found
+    ):
+        result = found(
+            Sample.objects.all(),
+            F("collected__start").asc(nulls_last=True),
+            "collected",
         )
 
-        assert [None if s.collected is None else str(s.collected) for s in result] == [
+        assert result == [
             "0001",
             "1990",
             "1990-01",
@@ -462,20 +445,12 @@ class TestStart:
             )
 
 
-NAMES_AN_INDEX = re.compile(r"\bindex\b", re.IGNORECASE)
-
-
 @pytest.mark.django_db
 class TestYearIndex:
-    def test_year_equality_uses_the_index(self, grid, query_plan):
-        plan = query_plan(Sample.objects.filter(collected__year=1990))
+    def test_year_equality_uses_the_index(self, grid, seeks_index):
+        result = seeks_index(Sample.objects.filter(collected__year=1990))
 
-        assert NAMES_AN_INDEX.search(plan)
-
-    def test_month_equality_reads_the_whole_table(self, grid, query_plan):
-        plan = query_plan(Sample.objects.filter(collected__month=6))
-
-        assert not NAMES_AN_INDEX.search(plan)
+        assert result
 
     def test_year_still_compares_with_another_year(self, db):
         same = RecordFactory(date="1990-06", other="1990")

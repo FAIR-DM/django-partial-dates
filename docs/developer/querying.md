@@ -463,7 +463,7 @@ the month they pick. Each step is the count above with the earlier choices as fi
 Each step has a `None` group for the dates that stop at the level above. Show it as "month
 unknown" or "day unknown", or drop it with `month__isnull=False` or `day__isnull=False`.
 
-## What each precision gives
+## Check what each precision gives
 
 The table shows what each part gives for a date at each precision.
 
@@ -474,6 +474,23 @@ The table shows what each part gives for a date at each precision.
 | `1990-06-14` | 1990 | 6 | 14 | 1990-06-14 |
 | no date | none | none | none | none |
 
+## Check which queries use an index
+
+When the column has an index, a range filter such as `gte` with `lte`, a filter on one year
+with `year=1990`, and ordering by the field itself use it on PostgreSQL and SQLite. Filters on
+`month` and `day`, and comparisons of `year` other than equality, read the whole table. "June of
+any year" is the usual example. Whether a column has an index stays your decision.
+
+A filter on one year uses the index because `YearExact`, the `exact` lookup of `Year`, compares
+the stored text with the year's first and last possible text, `1990` and `1990-99`, instead of
+reading the year out of every row. Comparing the year with another field, as in
+`year=F("other__year")`, takes Django's own comparison.
+## Leave out Django's text lookups
+
+Django gives every text-based field lookups such as `contains`, `startswith` and `regex`. They
+stay as Django gives them and read the stored text. This page does not cover them. Use the
+filters above to ask about a year, a month, a day or a range.
+
 ## Why a bound is a position in the sort order
 
 A filter compares text, and partial dates are uncertain, so some matches are uncertain too. This
@@ -482,12 +499,6 @@ each bound. The order is the one `PartialDate` sorts in, so every filter and eve
 date whose period contains the bound sorts before it, so `gt` and `gte` leave it out and `lt` and
 `lte` include it. [ADR 0001](../adr/0001-store-partial-dates-as-iso-8601-strings.md) records the
 decision.
-
-## Which of Django's lookups this page does not cover
-
-Django gives every text-based field lookups such as `contains`, `startswith` and `regex`. They
-stay as Django gives them and read the stored text. This page does not cover them. Use the
-filters above to ask about a year, a month, a day or a range.
 
 ## Why a year sits on 1 January on a date axis
 
@@ -505,15 +516,3 @@ decision: SQLite first, PostgreSQL last when ascending. The package does not ove
 that ordering by a partial date behaves like ordering by any other nullable column in your
 project. The cost is that you name `nulls_first` or `nulls_last` wherever the result must be the
 same on both.
-
-## Which queries use an index
-
-When the column has an index, a range filter such as `gte` with `lte`, a filter on one year
-with `year=1990`, and ordering by the field itself use it on PostgreSQL and SQLite. Filters on
-`month` and `day`, and comparisons of `year` other than equality, read the whole table. "June of
-any year" is the usual example. Whether a column has an index stays your decision.
-
-A filter on one year uses the index because `YearExact`, the `exact` lookup of `Year`, compares
-the stored text with the year's first and last possible text, `1990` and `1990-99`, instead of
-reading the year out of every row. Comparing the year with another field, as in
-`year=F("other__year")`, takes Django's own comparison.

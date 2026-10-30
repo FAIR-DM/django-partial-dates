@@ -1,7 +1,12 @@
+import re
+
 import pytest
 from django.db import connection
 
 from tests.factories import EventFactory, RecordFactory, SampleFactory
+
+SEEK = re.compile(r"SEARCH .* USING|Index (Only )?Scan")
+WALK = re.compile(r"USING (COVERING )?INDEX|Index (Only )?Scan")
 
 
 @pytest.fixture
@@ -21,7 +26,6 @@ def sample(db):
 
 @pytest.fixture
 def grid(db):
-    """Rows at each precision around the bound 1990-06, then a row holding no date."""
     texts = [
         "1990",
         "1990-05",
@@ -38,7 +42,6 @@ def grid(db):
 
 @pytest.fixture
 def spread(db):
-    """Rows at each precision, including the earliest and latest, then no date."""
     texts = [
         "9999-12-31",
         "1990-06-14",
@@ -55,13 +58,28 @@ def spread(db):
 
 
 @pytest.fixture
-def found():
-    """Return the ISO forms a queryset of samples holds, in the order of the rows."""
+def starts(db):
+    texts = [
+        "0001",
+        "1990",
+        "1990-01",
+        "1990-01-01",
+        "1990-06",
+        "1990-06-01",
+        "1990-06-14",
+        "2000-02-29",
+        "9999-12-31",
+        None,
+    ]
+    return [SampleFactory(collected=text) for text in texts]
 
-    def texts(queryset):
+
+@pytest.fixture
+def found():
+    def texts(queryset, *ordering):
         return [
             None if sample.collected is None else str(sample.collected)
-            for sample in queryset.order_by("pk")
+            for sample in queryset.order_by(*(ordering or ("pk",)))
         ]
 
     return texts
@@ -69,14 +87,9 @@ def found():
 
 @pytest.fixture
 def query_plan(db):
-    """Return the database's plan for a queryset, as text.
-
-    On PostgreSQL it first forbids a sequential scan inside the test's transaction, so
-    a small table cannot hide a filter that has no index path.
-    """
-
     def plan(queryset):
         if connection.vendor == "postgresql":
+            # A small table would otherwise hide a query that has no index path.
             with connection.cursor() as cursor:
                 cursor.execute("SET LOCAL enable_seqscan = off")
         return queryset.explain()
@@ -85,8 +98,23 @@ def query_plan(db):
 
 
 @pytest.fixture
+def seeks_index(query_plan):
+    def check(queryset):
+        return bool(SEEK.search(query_plan(queryset)))
+
+    return check
+
+
+@pytest.fixture
+def walks_index(query_plan):
+    def check(queryset):
+        return bool(WALK.search(query_plan(queryset)))
+
+    return check
+
+
+@pytest.fixture
 def guide_samples(db):
-    """The rows the developer guide's examples run against."""
     texts = [
         "1990",
         "1990-05",

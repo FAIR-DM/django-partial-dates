@@ -200,3 +200,17 @@ US-1 has six tasks and US-2 five, each on one concern.
   proved by the tests in `tests/test_lookups.py` instead.
 
 **ADR:** none — local to this feature's documentation.
+
+## D21 — Review outcome
+
+- TST-001 (medium): docstrings on test fixtures and helpers removed.
+- TST-002 (medium): the shared setup moved to `tests/conftest.py`, and one `found` fixture replaces
+  three copies of the same helper.
+- TST-003 (low): a test now compares the rows the guide lists with the rows its examples run on.
+- TST-004 (low): the guide's examples check that `ValueError` is raised, not its wording.
+- TST-005 (low): the index tests match a seek or a walk of the index, and the test that the month
+  filter reads the whole table is gone, because it pinned the planner and not the package.
+- DOC-001 (low): the guide's tasks come before its explanation, and the homepage links the
+  reference. The code of conduct stays out, because the repository has none (D20).
+
+**ADR:** none — corrections to this feature's tests and pages.

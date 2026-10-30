@@ -58,7 +58,7 @@ tests workflow, because the shared workflow runs SQLite only.
 
 ### R3 — Filtering, ordering and grouping in the database
 
-*feature · advances G3, G6*
+*delivered in [#14](https://github.com/FAIR-DM/django-partial-dates/issues/14) · advances G3, G6*
 
 String comparison already gives range filters and ordering. This item adds the lookups that
 reading the ISO form makes possible, and the part that matters as much as the code: a guide that

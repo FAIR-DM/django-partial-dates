@@ -62,6 +62,7 @@ out samples whose month nobody recorded.
 ## Next steps
 
 - [Developer guide](developer/index.md): store and query partial dates from Python.
+- [Reference](reference/prior-art.md): the packages this one replaces, and why.
 
 ## About the project
 

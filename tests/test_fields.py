@@ -1,7 +1,6 @@
 import datetime
 import io
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -517,8 +516,6 @@ NOT_PARTIAL_DATES = [
     pytest.param(1990, id="integer"),
 ]
 
-NAMES_AN_INDEX = re.compile(r"\bindex\b", re.IGNORECASE)
-
 
 @pytest.mark.django_db
 class TestBounds:
@@ -593,12 +590,12 @@ class TestBounds:
 
 @pytest.mark.django_db
 class TestRangeIndex:
-    def test_a_lower_and_upper_bound_use_the_index(self, grid, query_plan):
-        plan = query_plan(
+    def test_a_lower_and_upper_bound_use_the_index(self, grid, seeks_index):
+        result = seeks_index(
             Sample.objects.filter(collected__gte="1990-06", collected__lte="2000")
         )
 
-        assert NAMES_AN_INDEX.search(plan)
+        assert result
 
 
 DATED = [
@@ -616,40 +613,39 @@ DATED = [
 
 @pytest.mark.django_db
 class TestOrdering:
-    def ordered(self, *expressions):
-        """Return the ISO forms of the samples, ordered by the expressions."""
-        return [
-            None if sample.collected is None else str(sample.collected)
-            for sample in Sample.objects.order_by(*expressions)
-        ]
-
-    def test_order_by_the_field_gives_the_order_sorted_gives(self, spread):
+    def test_order_by_the_field_gives_the_order_sorted_gives(self, spread, found):
         dated = [sample.collected for sample in spread if sample.collected]
 
-        result = self.ordered(F("collected").asc(nulls_last=True))
+        result = found(Sample.objects.all(), F("collected").asc(nulls_last=True))
 
         assert result == [str(date) for date in sorted(dated)] + [None]
 
-    def test_a_year_sorts_before_its_months_and_a_month_before_its_days(self, spread):
-        result = self.ordered(F("collected").asc(nulls_last=True))
+    def test_a_year_sorts_before_its_months_and_a_month_before_its_days(
+        self, spread, found
+    ):
+        result = found(Sample.objects.all(), F("collected").asc(nulls_last=True))
 
         assert result[2:6] == ["1990", "1990-06", "1990-06-01", "1990-06-14"]
 
-    def test_order_by_the_field_descending_gives_the_reverse(self, spread):
-        result = self.ordered(F("collected").desc(nulls_first=True))
+    def test_order_by_the_field_descending_gives_the_reverse(self, spread, found):
+        result = found(Sample.objects.all(), F("collected").desc(nulls_first=True))
 
         assert result == [None, *reversed(DATED)]
 
-    def test_nulls_first_puts_a_row_holding_no_date_first(self, spread):
-        assert self.ordered(F("collected").asc(nulls_first=True))[0] is None
+    def test_nulls_first_puts_a_row_holding_no_date_first(self, spread, found):
+        assert (
+            found(Sample.objects.all(), F("collected").asc(nulls_first=True))[0] is None
+        )
 
-    def test_nulls_last_puts_a_row_holding_no_date_last(self, spread):
-        assert self.ordered(F("collected").asc(nulls_last=True))[-1] is None
+    def test_nulls_last_puts_a_row_holding_no_date_last(self, spread, found):
+        assert (
+            found(Sample.objects.all(), F("collected").asc(nulls_last=True))[-1] is None
+        )
 
-    def test_order_by_the_field_uses_the_index(self, spread, query_plan):
-        plan = query_plan(Sample.objects.order_by("collected"))
+    def test_order_by_the_field_uses_the_index(self, spread, walks_index):
+        result = walks_index(Sample.objects.order_by("collected"))
 
-        assert NAMES_AN_INDEX.search(plan)
+        assert result
 
 
 @pytest.mark.django_db
