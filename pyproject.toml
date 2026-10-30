@@ -27,6 +27,7 @@ dependencies = ["django>=5.2"]
 
 [project.optional-dependencies]
 django-filter = ["django-filter>=26.2"]
+djangorestframework = ["djangorestframework>=3.18"]
 
 [project.urls]
 Homepage = "https://github.com/FAIR-DM/django-partial-dates"

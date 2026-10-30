@@ -554,6 +554,9 @@ dependencies = [
 django-filter = [
     { name = "django-filter" },
 ]
+djangorestframework = [
+    { name = "djangorestframework" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -569,8 +572,9 @@ dev = [
 requires-dist = [
     { name = "django", specifier = ">=5.2" },
     { name = "django-filter", marker = "extra == 'django-filter'", specifier = ">=26.2" },
+    { name = "djangorestframework", marker = "extra == 'djangorestframework'", specifier = ">=3.18" },
 ]
-provides-extras = ["django-filter"]
+provides-extras = ["django-filter", "djangorestframework"]
 
 [package.metadata.requires-dev]
 dev = [
