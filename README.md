@@ -26,8 +26,9 @@ the invented date from a recorded one.
 ## Status
 
 Pre-alpha. The package holds a partial date value and a model field that stores it, and the
-field filters, orders, selects and groups by year, month, day and range in the database. Form
-handling is not written yet.
+field filters, orders, selects and groups by year, month, day and range in the database. A
+migration operation converts a column written by django-partial-date. Form handling is not
+written yet.
 
 ## Usage
 
@@ -224,6 +225,15 @@ The [querying guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/d
 says which uncertain dates each filter includes, and gives recipes for June of any year, a date
 axis, a drilldown from year to day, and the other rules a range can follow. It also says where
 each database sorts a row holding no date, and how to choose.
+
+## Moving from django-partial-date
+
+`ConvertPartialDateField` converts a column written by django-partial-date to a
+`PartialDateField` in place, on PostgreSQL and SQLite, and keeps every value. It stops before
+changing anything when a value is not exactly what django-partial-date writes. The
+[guide to the move](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/moving-from-django-partial-date.md)
+takes you through changing your existing migrations, converting the columns and uninstalling
+django-partial-date.
 
 ## Scope and philosophy
 
