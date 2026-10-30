@@ -1,3 +1,4 @@
+import itertools
 from html.parser import HTMLParser
 
 import pytest
@@ -193,3 +194,111 @@ class TestEditing:
         assert resubmitted.is_valid()
         assert resubmitted.changed_data == []
         assert resubmitted.cleaned_data["when"] == initial
+
+
+class TestRefusing:
+    @pytest.mark.parametrize("stored", [None, PartialDate(1990, 6, 14)])
+    def test_a_day_with_no_month_is_incomplete_and_never_dropped(self, stored):
+        form = make_form()(posted("1990", "", "14"), initial={"when": stored})
+
+        assert form.has_error("when", code="incomplete")
+        assert "when" not in form.cleaned_data
+
+    @pytest.mark.parametrize(
+        "entry", [posted("", "6"), posted("", "", "14"), posted("", "6", "14")]
+    )
+    def test_a_part_with_no_year_is_incomplete(self, entry):
+        form = make_form()(entry)
+
+        assert form.has_error("when", code="incomplete")
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            posted("1990", "2", "30"),
+            posted("1900", "2", "29"),
+            posted("1990", "13"),
+            posted("1990", "0"),
+            posted("1990", "0", "5"),
+            posted("1990", "6", "0"),
+            posted("1990", "6", "32"),
+            posted("1990", "x"),
+            posted("1990", "6", "x"),
+            posted("x"),
+            posted("0"),
+            posted("-5"),
+            posted("10000"),
+            posted("9" * 5000),
+        ],
+    )
+    def test_a_date_that_does_not_exist_or_cannot_be_read_is_invalid(self, entry):
+        form = make_form()(entry)
+
+        assert form.has_error("when", code="invalid")
+        assert "when" not in form.cleaned_data
+
+    def test_the_29th_of_february_is_accepted_in_a_leap_year(self):
+        form = make_form()(posted("2000", "2", "29"))
+
+        assert form.is_valid()
+        assert form.cleaned_data["when"] == PartialDate(2000, 2, 29)
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            posted("1990", "", "14"),
+            posted("1990", "2", "30"),
+            posted("1850", "2", "31"),
+            posted("", "6", "14"),
+        ],
+    )
+    def test_a_refused_entry_comes_back_with_each_submitted_part_selected(self, entry):
+        form = make_form()(entry)
+
+        page = render(form)
+
+        assert not form.is_valid()
+        for part in PARTS:
+            assert page.selected(part) == [entry[f"when_{part}"]]
+
+    @pytest.mark.parametrize("year", ["1990", "1850", "2500"])
+    def test_a_year_is_listed_once_however_it_came_to_be_shown(self, year):
+        page = render(make_form()(posted(year, "", "14")))
+
+        assert page.values("year").count(year) == 1
+
+    @pytest.mark.parametrize("year", ["0", "x", "-5", "10000", "9" * 5000])
+    def test_a_year_no_date_can_have_is_never_offered(self, year):
+        page = render(make_form()(posted(year)))
+
+        assert year not in page.values("year")
+
+
+class TestEveryCombination:
+    @pytest.mark.parametrize(
+        ("year", "month", "day"),
+        list(
+            itertools.product(
+                ["", "1990", "0", "x"],
+                ["", "6", "2", "13", "0", "x"],
+                ["", "14", "30", "29", "x"],
+            )
+        ),
+    )
+    def test_an_entry_is_stored_with_exactly_its_parts_or_refused_with_a_code(
+        self, year, month, day
+    ):
+        form = make_form(required=False)(posted(year, month, day))
+
+        if form.is_valid():
+            value = form.cleaned_data["when"]
+            if not (year or month or day):
+                assert value is None
+            else:
+                assert value.year == int(year)
+                assert value.month == (int(month) if month else None)
+                assert value.day == (int(day) if day else None)
+        else:
+            codes = {error.code for error in form.errors.as_data()["when"]}
+            assert codes
+            assert codes <= {"required", "incomplete", "invalid"}
