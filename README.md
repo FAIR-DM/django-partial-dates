@@ -26,8 +26,9 @@ the invented date from a recorded one.
 ## Status
 
 Pre-alpha. The package holds a partial date value and a model field that stores it, and the
-field filters, orders, selects and groups by year, month, day and range in the database. Form
-handling is not written yet.
+field filters, orders, selects and groups by year, month, day and range in the database. A form
+field and widget enter a partial date in a plain Django form. Model forms and the admin do not
+use them yet.
 
 ## Usage
 
@@ -204,6 +205,30 @@ $ python manage.py loaddata samples.jsonl
 ```
 
 A fixture holding text that is not a partial date, such as `1990-6`, is refused when it is loaded.
+
+## Forms
+
+`partial_dates.forms.PartialDateField` enters a partial date in a form, with a year, a month and
+a day select. The user gives the parts they know and leaves the rest empty. It needs no entry in
+`INSTALLED_APPS` and no JavaScript.
+
+```python
+>>> from django import forms
+>>> from partial_dates.forms import PartialDateField
+>>> class EventForm(forms.Form):
+...     happened = PartialDateField()
+>>> form = EventForm({"happened_year": "1990", "happened_month": "6", "happened_day": ""})
+>>> form.is_valid()
+True
+>>> form.cleaned_data["happened"]
+PartialDate(year=1990, month=6, day=None)
+```
+
+A day without a month is refused with the error code `incomplete`, never dropped, and a date that
+does not exist is refused with `invalid`. A form opened on a stored date selects exactly the parts
+it records. The
+[forms guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/forms.md)
+says what each error means.
 
 ## Querying
 

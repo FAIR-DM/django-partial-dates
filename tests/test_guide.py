@@ -9,6 +9,7 @@ from partial_dates import PartialDate
 from tests.models import Sample
 
 GUIDE = Path(__file__).parent.parent / "docs" / "developer" / "querying.md"
+FORMS_GUIDE = GUIDE.parent / "forms.md"
 FENCED_PYTHON = re.compile(r"^```python\n(.*?)^```", re.DOTALL | re.MULTILINE)
 LISTED_ROWS = re.compile(r"^for text in (\[.*?\]):$", re.DOTALL | re.MULTILINE)
 NO_DATE = "no date"
@@ -43,6 +44,22 @@ class TestExamples:
         listed = ast.literal_eval(LISTED_ROWS.search(GUIDE.read_text()).group(1))
 
         assert listed == [sample.collected for sample in guide_samples]
+
+
+class TestFormsExamples:
+    def test_every_example_on_the_forms_page_runs_and_prints_what_it_shows(self):
+        blocks = FENCED_PYTHON.findall(FORMS_GUIDE.read_text())
+        parser = doctest.DocTestParser()
+        test = parser.get_doctest("\n".join(blocks), {}, "forms", str(FORMS_GUIDE), 0)
+        runner = doctest.DocTestRunner(
+            optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
+        )
+        report = []
+
+        results = runner.run(test, out=report.append, clear_globs=False)
+
+        assert results.attempted > 0
+        assert results.failed == 0, "".join(report)
 
 
 def parse_tables(text):

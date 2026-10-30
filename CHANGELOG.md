@@ -32,7 +32,17 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A `start` transform on `PartialDateField`, giving the first day of a date's period as a
   `datetime.date`, for a date axis. It works in `values`, `values_list`, `annotate`, `order_by`,
   grouping and comparison with real dates.
-- The developer guide: installation, and a querying page that states which uncertain dates each
+- `partial_dates.forms.PartialDateField` and `partial_dates.forms.PartialDateWidget`, a form
+  field and a widget of year, month and day selects for entering a partial date in a plain Django
+  form. The user gives the parts they know and leaves the rest empty, and the field gives back a
+  `PartialDate` at that precision, or `None`. Every select keeps an empty choice, so a required
+  field still takes a year alone. A day without a month, or a month or day without a year, is
+  refused with the code `incomplete`, and a date that does not exist or text no select can produce
+  with `invalid`. A form opened on a stored date selects exactly the parts it records, including a
+  year the select does not list, and saving it unchanged reports no change. The selects read year,
+  month, day in every language, each has a name of its own for assistive technology, and nothing
+  needs JavaScript, a template setting or an `INSTALLED_APPS` entry.
+- The developer guide: installation, a page on entering a partial date in a form, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a
   range, leaving every one out, and taking in the whole of a month or year. It also covers
   ordering, counting by year, month and day, a date axis, a drilldown, and where each database
