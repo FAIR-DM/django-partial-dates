@@ -1,0 +1,37 @@
+[
+{
+  "model": "moving.sighting",
+  "pk": 1,
+  "fields": {"observed": "1990", "note": "year"}
+},
+{
+  "model": "moving.sighting",
+  "pk": 2,
+  "fields": {"observed": "1990-06", "note": "month"}
+},
+{
+  "model": "moving.sighting",
+  "pk": 3,
+  "fields": {"observed": "1990-06-14", "note": "day"}
+},
+{
+  "model": "moving.sighting",
+  "pk": 4,
+  "fields": {"observed": null, "note": "empty"}
+},
+{
+  "model": "moving.survey",
+  "pk": 1,
+  "fields": {"taken": "1991", "note": "year"}
+},
+{
+  "model": "moving.survey",
+  "pk": 2,
+  "fields": {"taken": "1991-03", "note": "month"}
+},
+{
+  "model": "moving.survey",
+  "pk": 3,
+  "fields": {"taken": "1991-03-15", "note": "day"}
+}
+]

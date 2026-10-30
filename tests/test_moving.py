@@ -183,3 +183,17 @@ class TestDatabases:
         migrate_to(LATEST)
 
         assert schemas() == from_empty
+
+
+class TestFixtures:
+    def test_a_fixture_the_old_field_wrote_loads(self, db, read_dates):
+        call_command("loaddata", "sightings.json", verbosity=0)
+
+        assert read_dates(Sighting, "observed") == [
+            "1990",
+            "1990-06",
+            "1990-06-14",
+            None,
+        ]
+        assert read_dates(Survey, "taken") == ["1991", "1991-03", "1991-03-15"]
+        assert Survey.objects.get(pk=2).taken == PartialDate(1991, 3)
