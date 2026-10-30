@@ -60,7 +60,8 @@ the rows whose part equals it. A date whose part is unknown is never found.
 ['1990-06-14']
 ```
 
-Every date has a year, so `year` finds a date at every precision. `1990` has no month, so
+The field registers these as the transforms `Year`, `Month` and `Day` from
+`partial_dates.lookups`, so you never import them. Every date has a year, so `year` finds a date at every precision. `1990` has no month, so
 `month=6` leaves it out. `1990-06` has no day, so `day=14` leaves it out, and `day=1` finds
 `1990-06-01` and not `1990-06`.
 
@@ -314,3 +315,8 @@ When the column has an index, a range filter such as `gte` with `lte`, and a fil
 with `year=1990`, use it on PostgreSQL and SQLite. Filters on `month` and `day`, and comparisons
 of `year` other than equality, read the whole table. "June of any year" is the usual example.
 Whether a column has an index stays your decision.
+
+A filter on one year uses the index because `YearExact`, the `exact` lookup of `Year`, compares
+the stored text with the year's first and last possible text, `1990` and `1990-99`, instead of
+reading the year out of every row. Comparing the year with another field, as in
+`year=F("other__year")`, takes Django's own comparison.
