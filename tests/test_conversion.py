@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pytest
-from django.db import DatabaseError, IntegrityError, connection, models
+from django.db import DatabaseError, IntegrityError, connection, migrations, models
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.graph import MigrationGraph
 
@@ -209,3 +209,138 @@ class TestTimeZones:
         assert [text for _, text in read_column("conv_zone", "seen")] == list(
             stored.values()
         )
+
+
+class ExcludingRouter:
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
+        return False if model_name == "excluded" else None
+
+
+@pytest.mark.django_db(transaction=True)
+class TestConversionTargets:
+    @pytest.fixture
+    def migrate(self):
+        def run(state, *operations):
+            migration = migrations.Migration("0001_convert", "conv")
+            migration.operations = list(operations)
+            with connection.schema_editor(atomic=migration.atomic) as editor:
+                return migration.apply(state, editor)
+
+        return run
+
+    def test_field_with_its_own_db_column(
+        self,
+        build_state,
+        create_tables,
+        insert_rows,
+        migrate,
+        read_column,
+        describe_column,
+    ):
+        options = {"null": True, "db_index": True, "db_column": "when_seen"}
+        state = build_state("conv_column", {"seen": OldPartialDateField(**options)})
+        create_tables(state)
+        insert_rows("conv_column", "when_seen", ["1990-06-01 00:00:01"])
+
+        migrate(
+            state, ConvertPartialDateField("thing", "seen", PartialDateField(**options))
+        )
+
+        create_tables(
+            build_state("conv_column_new", {"seen": PartialDateField(**options)})
+        )
+        assert read_column("conv_column", "when_seen") == [(1, "1990-06")]
+        assert describe_column("conv_column", "when_seen") == describe_column(
+            "conv_column_new", "when_seen"
+        )
+
+    def test_table_name_with_a_capital_and_a_hyphen(
+        self,
+        build_state,
+        create_tables,
+        insert_rows,
+        migrate,
+        read_column,
+        describe_column,
+    ):
+        options = {"null": True, "unique": True}
+        state = build_state("Field-Notes", {"seen": OldPartialDateField(**options)})
+        create_tables(state)
+        insert_rows("Field-Notes", "seen", ["1990-06-14 00:00:02"])
+
+        migrate(
+            state, ConvertPartialDateField("thing", "seen", PartialDateField(**options))
+        )
+
+        create_tables(
+            build_state("Field-Notes-new", {"seen": PartialDateField(**options)})
+        )
+        assert read_column("Field-Notes", "seen") == [(1, "1990-06-14")]
+        assert describe_column("Field-Notes", "seen") == describe_column(
+            "Field-Notes-new", "seen"
+        )
+
+    def test_several_fields_and_models_in_one_migration(
+        self, build_state, create_tables, insert_rows, migrate, read_column
+    ):
+        state = build_state(
+            "conv_first",
+            {
+                "seen": OldPartialDateField(null=True),
+                "heard": OldPartialDateField(null=True, db_column="when_heard"),
+            },
+        )
+        state = build_state(
+            "conv_second", {"seen": OldPartialDateField()}, name="Other", state=state
+        )
+        create_tables(state)
+        insert_rows("conv_first", "seen", ["1990-01-01 00:00:00"])
+        insert_rows("conv_first", "when_heard", ["1991-02-01 00:00:01"])
+        insert_rows("conv_second", "seen", ["1992-03-04 00:00:02"])
+
+        migrate(
+            state,
+            ConvertPartialDateField("thing", "seen", PartialDateField(null=True)),
+            ConvertPartialDateField(
+                "thing", "heard", PartialDateField(null=True, db_column="when_heard")
+            ),
+            ConvertPartialDateField("other", "seen", PartialDateField()),
+        )
+
+        assert read_column("conv_first", "seen") == [(1, "1990"), (2, None)]
+        assert read_column("conv_first", "when_heard") == [(1, None), (2, "1991-02")]
+        assert read_column("conv_second", "seen") == [(1, "1992-03-04")]
+
+    def test_model_the_router_excludes_is_left_alone(
+        self,
+        settings,
+        build_state,
+        create_tables,
+        insert_rows,
+        migrate,
+        read_column,
+        describe_column,
+    ):
+        settings.DATABASE_ROUTERS = ["tests.test_conversion.ExcludingRouter"]
+        state = build_state("conv_kept", {"seen": OldPartialDateField(null=True)})
+        state = build_state(
+            "conv_excluded",
+            {"seen": OldPartialDateField(null=True)},
+            name="Excluded",
+            state=state,
+        )
+        create_tables(state)
+        insert_rows("conv_kept", "seen", ["1990-01-01 00:00:00"])
+        insert_rows("conv_excluded", "seen", ["1990-01-01 00:00:00"])
+        before = read_column("conv_excluded", "seen")
+        column = describe_column("conv_excluded", "seen")
+
+        migrate(
+            state,
+            ConvertPartialDateField("thing", "seen", PartialDateField(null=True)),
+            ConvertPartialDateField("excluded", "seen", PartialDateField(null=True)),
+        )
+
+        assert read_column("conv_kept", "seen") == [(1, "1990")]
+        assert read_column("conv_excluded", "seen") == before
+        assert describe_column("conv_excluded", "seen") == column

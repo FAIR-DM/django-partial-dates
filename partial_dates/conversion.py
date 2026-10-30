@@ -176,11 +176,14 @@ class ConvertPartialDateField(migrations.AlterField):
         Returns:
             A `CharField` of ten characters with the old field's nullability.
         """
-        return self.attached(field, models.CharField(max_length=10, null=field.null))
+        return self.attached(
+            field,
+            models.CharField(max_length=10, null=field.null, db_column=field.db_column),
+        )
 
     @staticmethod
     def attached(field: models.Field, clone: models.Field) -> models.Field:
-        """Give a clone the name, column and model of the field it stands in for.
+        """Give a clone the name and model of the field it stands in for.
 
         Args:
             field: The field being cloned.
@@ -190,6 +193,5 @@ class ConvertPartialDateField(migrations.AlterField):
             The clone.
         """
         clone.set_attributes_from_name(field.name)
-        clone.column = field.column
         clone.model = field.model
         return clone
