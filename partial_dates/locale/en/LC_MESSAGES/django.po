@@ -46,3 +46,7 @@ msgstr ""
 #: forms.py:115
 msgid "Enter a date that exists."
 msgstr ""
+
+#: rest_framework.py:22
+msgid "Enter a date as YYYY, YYYY-MM or YYYY-MM-DD."
+msgstr ""

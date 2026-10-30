@@ -1,5 +1,7 @@
 """A serializer field for a partial date, for Django REST framework."""
 
+from typing import Any
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
@@ -33,3 +35,25 @@ class PartialDateField(serializers.Field):
         if isinstance(value, PartialDate):
             return value.isoformat()
         return PartialDate.fromisoformat(value).isoformat()
+
+    def to_internal_value(self, data: Any) -> PartialDate:
+        """Read a partial date from incoming data.
+
+        Args:
+            data: A `PartialDate`, or text in the ISO form.
+
+        Returns:
+            The partial date the data names.
+
+        Raises:
+            serializers.ValidationError: With code `invalid` for anything else, including an
+                empty string.
+        """
+        if isinstance(data, PartialDate):
+            return data
+        try:
+            return PartialDate.fromisoformat(data)
+        except ValueError:
+            raise serializers.ValidationError(
+                self.error_messages["invalid"], code="invalid"
+            ) from None
