@@ -7,8 +7,8 @@ from django.core.exceptions import ImproperlyConfigured
 from partial_dates.fields import PartialDateField
 from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
 from partial_dates.partial_date import PartialDate
-from tests.factories import SampleFactory
-from tests.models import Sample
+from tests.factories import NoteFactory, RecordFactory, SampleFactory
+from tests.models import Record, Sample
 
 LOOKUPS = ["exact", "gt", "gte", "lt", "lte"]
 BOUNDS = ["1990", "1990-06", "1990-06-14"]
@@ -550,3 +550,84 @@ class TestPartialDateRangeFilter:
         both = ["", "2001", "1999", "2003"]
 
         assert offered(years=[2001, 1999, 2003]) == [both, both]
+
+
+class TestAcrossARelation:
+    @pytest.fixture
+    def records(self, db):
+        def make(*drafted):
+            record = RecordFactory()
+            for text in drafted:
+                NoteFactory(record=record, drafted=text)
+            return record
+
+        return {
+            "before and after": make("1989", "1992"),
+            "inside": make("1990-09"),
+            "inside twice": make("1990-09", "1991-01"),
+            "inside and outside": make("1985", "1990-09"),
+            "before": make("1985"),
+            "after": make("1992-01"),
+            "no note": make(),
+        }
+
+    @pytest.fixture
+    def named(self, records):
+        def names(queryset):
+            by_pk = {record.pk: name for name, record in records.items()}
+            return sorted(by_pk[record.pk] for record in queryset)
+
+        return names
+
+    @pytest.fixture
+    def across(self, filterset):
+        def apply(data, **kwargs):
+            ranged = PartialDateRangeFilter(field_name="note__drafted", **kwargs)
+            meta = type("Meta", (), {"model": Record, "fields": []})
+            attrs = {"Meta": meta, "drafted": ranged}
+            built = type("RecordFilter", (django_filters.FilterSet,), attrs)
+            applied = built(data, queryset=Record.objects.all())
+            assert applied.is_valid()
+            return applied.qs
+
+        return apply
+
+    def test_both_bounds_apply_to_the_same_date(self, records, named, across):
+        data = entered("1990", "1991", name="drafted")
+
+        found = across(data, distinct=True)
+
+        assert named(found) == ["inside", "inside and outside", "inside twice"]
+
+    def test_a_record_with_one_date_either_side_of_the_range_is_not_found(
+        self, records, named, across
+    ):
+        data = entered("1990", "1991", name="drafted")
+
+        assert "before and after" not in named(across(data, distinct=True))
+
+    def test_a_record_is_found_once_per_date_without_distinct(
+        self, records, named, across
+    ):
+        data = entered("1990", "1992", name="drafted")
+
+        found = named(across(data))
+
+        assert found.count("inside twice") == 2
+        assert found.count("inside") == 1
+
+    def test_distinct_finds_a_record_once(self, records, named, across):
+        data = entered("1990", "1992", name="drafted")
+
+        found = named(across(data, distinct=True))
+
+        assert found.count("inside twice") == 1
+
+    def test_exclude_leaves_the_records_with_a_date_in_the_range_out(
+        self, records, named, across
+    ):
+        data = entered("1990", "1991", name="drafted")
+
+        found = across(data, exclude=True)
+
+        assert named(found) == ["after", "before", "before and after", "no note"]
