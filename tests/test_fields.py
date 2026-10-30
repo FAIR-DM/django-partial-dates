@@ -666,3 +666,16 @@ class TestQueryCount:
 
         with django_assert_num_queries(1):
             list(Sample.objects.filter(collected__range=("1990", "1991")))
+
+    def test_ordering_runs_one_query_for_one_row_and_for_several(
+        self, django_assert_num_queries
+    ):
+        SampleFactory(collected="1990-06")
+
+        with django_assert_num_queries(1):
+            list(Sample.objects.order_by("collected"))
+
+        SampleFactory.create_batch(4, collected="1990-06")
+
+        with django_assert_num_queries(1):
+            list(Sample.objects.order_by("collected"))
