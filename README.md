@@ -237,6 +237,25 @@ it records. The
 says what each error means, how to limit the dates with a validator, and how to try the field in
 the example project on localhost.
 
+## Showing a date
+
+`PartialDate.display_form()` gives the text a reader should see, at the precision the date was
+recorded at and in the language active when you call it. A year reads as a year, a month as a month
+and year, and a day as a full date. No part that nobody recorded appears.
+
+```python
+>>> PartialDate(1990).display_form()
+'1990'
+>>> PartialDate(1990, 6).display_form()
+'June 1990'
+>>> PartialDate(1990, 6, 14).display_form()
+'June 14, 1990'
+```
+
+`str()` and `isoformat()` still give the ISO form in every language. The
+[showing guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/showing.md)
+shows other languages and says what each precision uses.
+
 ## Querying
 
 The field filters in the database by the year, month and day of a date, and by a range whose

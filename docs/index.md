@@ -13,6 +13,8 @@ holds a part nobody gave.
   or by one of its parts, and put them on a date axis with `start`.
 - [Enter a partial date](developer/forms.md) in a model form, the admin or a plain form, with a
   year, a month and a day select, giving as much of the date as the user knows.
+- [Show a partial date](developer/showing.md) to a reader at the precision it was recorded, in
+  the language of the page.
 - [Move from django-partial-date](developer/moving-from-django-partial-date.md) with a migration
   that converts the column in place and loses no value.
 

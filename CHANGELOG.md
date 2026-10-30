@@ -52,6 +52,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `PartialDateWidget(years=...)` names others for one field. The years offered limit nothing: a
   stored year the list does not hold is added to it, and any year a `PartialDate` accepts is
   accepted.
+- `PartialDate.display_form()`, the text a reader should see for a partial date, in the language
+  active when it is called. A year reads as a year, a month as Django's `YEAR_MONTH_FORMAT` and a
+  day as its `DATE_FORMAT`, so no month or day that nobody recorded appears. The year has four
+  digits at every precision and no thousands separator. `str()` and `isoformat()` are unchanged.
 - An `example/` project in the repository that serves a model form, a form with no model and the
   admin on localhost, with a command that seeds sign-ins and a sample at each precision. It is not
   part of the installed package.
