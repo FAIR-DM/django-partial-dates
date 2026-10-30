@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from partial_dates import PartialDate
-from tests.models import Sample
+from tests.models import Record, Sample
 
 GUIDE = Path(__file__).parent.parent / "docs" / "developer" / "querying.md"
 FORMS_GUIDE = GUIDE.parent / "forms.md"
@@ -50,7 +50,9 @@ class TestFormsExamples:
     def test_every_example_on_the_forms_page_runs_and_prints_what_it_shows(self):
         blocks = FENCED_PYTHON.findall(FORMS_GUIDE.read_text())
         parser = doctest.DocTestParser()
-        test = parser.get_doctest("\n".join(blocks), {}, "forms", str(FORMS_GUIDE), 0)
+        test = parser.get_doctest(
+            "\n".join(blocks), {"Record": Record}, "forms", str(FORMS_GUIDE), 0
+        )
         runner = doctest.DocTestRunner(
             optionflags=doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
         )

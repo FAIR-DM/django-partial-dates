@@ -42,7 +42,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   year the select does not list, and saving it unchanged reports no change. The selects read year,
   month, day in every language, each has a name of its own for assistive technology, and nothing
   needs JavaScript, a template setting or an `INSTALLED_APPS` entry.
-- The developer guide: installation, a page on entering a partial date in a form, and a querying page that states which uncertain dates each
+- `PartialDateField.formfield()` returns the form field, so a model form and the admin show the
+  year, month and day selects for a partial date field with no form or widget to declare. The
+  field's `blank`, `verbose_name`, `help_text`, default and `unique` carry over, and a validator on
+  the model field or the form field receives the `PartialDate`. With nothing said, the year select
+  lists the years from the current year down to 1900, worked out each time the form is shown, and
+  `PartialDateWidget(years=...)` names others for one field. The years offered limit nothing: a
+  stored year the list does not hold is added to it, and any year a `PartialDate` accepts is
+  accepted.
+- An `example/` project in the repository that serves a model form, a form with no model and the
+  admin on localhost, with a command that seeds sign-ins and a sample at each precision. It is not
+  part of the installed package.
+- The developer guide: installation, a page on entering a partial date in a form, in a model form
+  and in the admin, and a querying page that states which uncertain dates each
   filter includes, with recipes for June of any year and for adding every uncertain date to a
   range, leaving every one out, and taking in the whole of a month or year. It also covers
   ordering, counting by year, month and day, a date axis, a drilldown, and where each database

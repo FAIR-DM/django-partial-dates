@@ -2,8 +2,10 @@
 
 A person fills in a partial date with three selects: a year, a month and a day. They give the
 parts they know and leave the rest empty, and the form gives you back a `PartialDate` at the
-precision they entered, or `None` when they entered nothing. This page shows what the user sees,
-how to declare the field on a plain Django form, and what each error means.
+precision they entered, or `None` when they entered nothing. A model form and the admin use the
+selects for a `PartialDateField` with nothing for you to declare. This page shows what the user
+sees, how to use the field in a model form, in the admin and on a plain Django form, how to name
+the years it offers, and what each error means.
 
 `partial_dates.forms.PartialDateField` is the form field and `partial_dates.forms.PartialDateWidget`
 is the widget it renders with. The package root exports the model field of the same name, so import
@@ -135,6 +137,181 @@ True
 A refused entry is never saved with a part changed or dropped, and never raises. The messages are
 translatable. They live in the `en` catalog under `partial_dates/locale`.
 
+## Use the field in a model form
+
+Declare nothing about the form field. A model form built on a model with a `PartialDateField`
+shows the three selects.
+
+```python
+class Record(models.Model):
+    date = PartialDateField(
+        null=True, blank=True, help_text="When the record happened."
+    )
+```
+
+```python
+>>> from django.forms import modelform_factory
+>>> RecordForm = modelform_factory(Record, fields=["date"])
+>>> type(RecordForm.base_fields["date"]).__module__
+'partial_dates.forms'
+>>> form = RecordForm({"date_year": "1990", "date_month": "6"})
+>>> form.is_valid()
+True
+>>> form.cleaned_data["date"]
+PartialDate(year=1990, month=6, day=None)
+```
+
+Saving the form stores the value at the precision entered, and editing a row moves it between
+precisions. Saving a row without touching it leaves it as it was and reports no change.
+
+The model field's options carry over:
+
+- `blank=True` makes the date optional, and without it the year is required.
+- `verbose_name` and `help_text` become the form field's label and help text.
+- A `default`, whether a `PartialDate`, its ISO text or a callable, is selected when the form opens
+  on a new row, and saving the form unchanged stores it.
+- `unique=True` refuses a date another row holds at the same precision, with the error code
+  `unique` on the field.
+- A validator on the model field receives the `PartialDate`, and its error appears on the field.
+
+```python
+>>> RecordForm.base_fields["date"].required
+False
+>>> str(RecordForm.base_fields["date"].help_text)
+'When the record happened.'
+```
+
+## Use the field in the admin
+
+Register the model as you would any other. The admin shows the three selects on the add and
+change forms, and in inlines, with no form or widget override.
+
+```python
+from django.contrib import admin
+
+
+class NoteInline(admin.TabularInline):
+    model = Note
+
+
+@admin.register(Record)
+class RecordAdmin(admin.ModelAdmin):
+    inlines = [NoteInline]
+```
+
+Lists, `readonly_fields`, filters and search show the date as they show any other value, and are
+not changed by the package.
+
+## Name the years
+
+With nothing said, a field offers the years from the current year down to 1900, newest first. The
+current year is read each time the form is shown, so a server that is already running offers the
+new year when it arrives.
+
+To offer other years, pass them to the widget as a list, a range or a generator. They are shown in
+the order you give them.
+
+```python
+>>> from partial_dates.forms import PartialDateWidget
+
+>>> class SurveyForm(forms.Form):
+...     surveyed = PartialDateField(
+...         widget=PartialDateWidget(years=range(2030, 1799, -1))
+...     )
+```
+
+The widget reaches every route Django offers for choosing a widget. In a model form, name it in
+`Meta.widgets`. In the admin, name it in `formfield_overrides` or in a form of your own.
+
+```python
+>>> class NamedYearsForm(forms.ModelForm):
+...     class Meta:
+...         model = Record
+...         fields = ["date"]
+...         widgets = {"date": PartialDateWidget(years=range(2030, 1799, -1))}
+```
+
+Naming years changes the one field. Other fields on the form keep the default list.
+
+The years you offer are what the select lists, and they limit nothing. A stored year the list does
+not hold is added to it when the form opens, so saving the form keeps it. The field accepts any year
+a `PartialDate` accepts.
+
+```python
+>>> form = SurveyForm({"surveyed_year": "1650"})
+>>> form.is_valid()
+True
+>>> form.cleaned_data["surveyed"]
+PartialDate(year=1650, month=None, day=None)
+```
+
+A year below 1000 is recorded with four digits, so choosing `990` records `0990`.
+
+## Limit the dates with a validator
+
+To refuse dates outside a range, add a validator to the model field or to the form field. It
+receives the `PartialDate`, and the error it raises appears on the field.
+
+```python
+>>> from django.core.exceptions import ValidationError
+
+>>> def not_before_1950(value):
+...     if value.year < 1950:
+...         raise ValidationError("Enter a date from 1950.", code="too_early")
+
+>>> class RecentForm(forms.Form):
+...     when = PartialDateField(validators=[not_before_1950])
+
+>>> RecentForm({"when_year": "1900", "when_month": "6"}).has_error("when", code="too_early")
+True
+>>> RecentForm({"when_year": "1990"}).is_valid()
+True
+```
+
+## Translate the messages
+
+The messages the field shows, and the names on the selects, are translatable. The package carries
+the `en` catalog under `partial_dates/locale`. The month names come from Django and follow the
+active language already. To translate the rest into a language:
+
+1. Copy `partial_dates/locale/en/LC_MESSAGES/django.po` to `locale/<language>/LC_MESSAGES/django.po`
+   in your project.
+2. Translate each `msgstr`, and set the `Language` header.
+3. Run `python manage.py compilemessages`.
+4. Check that `LOCALE_PATHS` in your settings lists your project's `locale` directory.
+
+The order of the selects stays year, month, day in every language.
+
+## Run the example project
+
+The repository holds a small project, in `example/`, that serves a model form, a form with no
+model and the admin, so you can try the field before you use it. Run these commands from a clone
+of the repository, once the development environment is installed with `uv sync`.
+
+1. Create the database and fill it.
+
+   ```console
+   $ uv run python example/manage.py migrate
+   $ uv run python example/manage.py seed
+   ```
+
+   The `seed` command is safe to run again. It adds a sample at each precision, one in 1850 and
+   one in 0990, and three sign-ins.
+
+2. Start the server.
+
+   ```console
+   $ uv run python example/manage.py runserver 8033
+   ```
+
+3. Open `http://localhost:8033/`. The list links to each sample, to a page that adds one, to a
+   page with a form that has no model and shows what it cleaned, and to the admin.
+
+The sign-ins `regular.user`, `staff.user` and `super.user` have the email addresses
+`regular.user@example.com`, `staff.user@example.com` and `super.user@example.com`, and all have the
+password `password`. The staff user can add and change the sample models in the admin. They are for
+use on your own machine, and the project is not set up to be served to anyone else.
+
 ## Why a required field takes a year alone
 
 Required means a year was given. The month and day selects always offer an empty choice, and so
@@ -153,3 +330,10 @@ part to change.
 The day select always lists 1 to 31. Following the month would need JavaScript, which the package
 would have to ship and your project would have to load. A day that does not exist is refused with
 `invalid` when the form is submitted, as it is in Django's own date widget.
+
+## Why the offered years limit nothing
+
+A select holds a fixed list, and a partial date accepts years 1 to 9999. If the list were a limit,
+editing a row that holds 1850 would lose the year the moment it was saved, because the list starts
+at 1900. The list is a convenience for choosing, and a validator is the way to say a date is not
+allowed.
