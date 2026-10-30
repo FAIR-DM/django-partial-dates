@@ -305,8 +305,9 @@ The error has four attributes:
 1. Read `count` and `rows` in the error the migration printed.
 
    ```text
-   partial_dates.conversion.RefusedValuesError: ('moving.Sighting', 'observed', 2,
-   [(2, '1990-06-14 13:45:37'), (7, '1990-06-14 00:00:00')])
+   partial_dates.conversion.RefusedValuesError: moving.Sighting.observed holds 2 value(s)
+   django-partial-date does not write. The first are [(2, '1990-06-14 13:45:37'),
+   (7, '1990-06-14 00:00:00')].
    ```
 
 2. Decide what each row should hold. The table below says what each kind of value means.

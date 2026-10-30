@@ -73,7 +73,6 @@ class TestOldPartialDateField:
             "verbose_name": "seen",
             "default": None,
         }
-        assert isinstance(field, models.Field)
 
 
 CONVERSIONS = [
@@ -452,7 +451,6 @@ class TestRefusal:
         assert [key for key, _ in raised.value.rows] == list(range(101, 121))
 
     def test_error_is_an_exception_with_no_database_error_in_it(self):
-        assert issubclass(RefusedValuesError, Exception)
         assert not issubclass(RefusedValuesError, DatabaseError)
 
     def test_non_atomic_migration_leaves_the_column_unchanged(

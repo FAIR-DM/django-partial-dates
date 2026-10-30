@@ -29,8 +29,14 @@ how-to guide, an ADR and a test app whose migrations follow the guide carry the 
 ### `partial_dates/conversion.py`
 
 ```python
-class RefusedValuesError(Exception): ...        # refused values, with the error FR-007 asks for
-class OldPartialDateField(models.Field): ...    # the stand-in
+class RefusedValuesError(
+    Exception
+): ...  # refused values, with the error FR-007 asks for
+
+
+class OldPartialDateField(models.Field): ...  # the stand-in
+
+
 class ConvertPartialDateField(migrations.AlterField): ...
 ```
 

@@ -18,7 +18,6 @@ FORWARD = (
 )
 STORED = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2}) 00:00:0([012])")
 SHOWN = 20
-BATCH = 1000
 BACKWARD = (
     "CASE LENGTH({c}) WHEN 4 THEN {c} || '-01-01 00:00:00' "
     "WHEN 7 THEN {c} || '-01 00:00:01' ELSE {c} || ' 00:00:02' END"
@@ -51,7 +50,10 @@ class RefusedValuesError(Exception):
     def __init__(
         self, model: str, field: str, count: int, rows: list[tuple[Any, str]]
     ) -> None:
-        super().__init__(model, field, count, rows)
+        super().__init__(
+            f"{model}.{field} holds {count} value(s) django-partial-date does not "
+            f"write. The first are {rows}."
+        )
         self.model = model
         self.field = field
         self.count = count
@@ -264,15 +266,14 @@ class ConvertPartialDateField(migrations.AlterField):
         )
         key = quote(cast(str, model._meta.pk.column))
         table = quote(model._meta.db_table)
-        with connection.cursor() as cursor:
+        with connection.chunked_cursor() as cursor:
             cursor.execute(
                 f"SELECT {key}, {stored} FROM {table} "  # noqa: S608
                 f"WHERE {column} IS NOT NULL ORDER BY {key}"
             )
-            while batch := cursor.fetchmany(BATCH):
-                for pk, text in batch:
-                    if not self.converts(text):
-                        yield pk, text
+            for pk, text in cursor:
+                if not self.converts(text):
+                    yield pk, text
 
     @staticmethod
     def converts(text: str) -> bool:

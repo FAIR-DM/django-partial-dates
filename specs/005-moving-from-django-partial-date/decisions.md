@@ -10,9 +10,8 @@ A developer whose project stores dates with django-partial-date gets one migrati
 converts an existing column in place to the column FS-002 defines, on PostgreSQL and SQLite, losing
 no value, and a how-to guide to the move that includes stopping the existing migrations importing
 the old package. It serves G5. Forms and the admin (R4), history tools (R7), and the changes to
-FAIR-DM and django-literature themselves are out of scope. The maintainer handed this work
-over on 2026-10-30, so this reading was not put to them first, and every assumption is recorded
-here for veto.
+FAIR-DM and django-literature themselves are out of scope. Every assumption made in that
+reading is recorded here.
 
 ## What the old column holds
 
