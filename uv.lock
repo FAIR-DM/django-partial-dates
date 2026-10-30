@@ -550,6 +550,11 @@ dependencies = [
     { name = "django" },
 ]
 
+[package.optional-dependencies]
+django-filter = [
+    { name = "django-filter" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "django-filter" },
@@ -561,7 +566,11 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "django", specifier = ">=5.2" }]
+requires-dist = [
+    { name = "django", specifier = ">=5.2" },
+    { name = "django-filter", marker = "extra == 'django-filter'", specifier = ">=26.2" },
+]
+provides-extras = ["django-filter"]
 
 [package.metadata.requires-dev]
 dev = [

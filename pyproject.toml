@@ -25,6 +25,9 @@ classifiers = [
 ]
 dependencies = ["django>=5.2"]
 
+[project.optional-dependencies]
+django-filter = ["django-filter>=26.2"]
+
 [project.urls]
 Homepage = "https://github.com/FAIR-DM/django-partial-dates"
 Repository = "https://github.com/FAIR-DM/django-partial-dates"
