@@ -37,6 +37,24 @@ def grid(db):
 
 
 @pytest.fixture
+def spread(db):
+    """Rows at each precision, including the earliest and latest, then no date."""
+    texts = [
+        "9999-12-31",
+        "1990-06-14",
+        "1991",
+        "0001",
+        "1990",
+        "1990-06",
+        "2000-02-29",
+        "1990-06-01",
+        "0990",
+        None,
+    ]
+    return [SampleFactory(collected=text) for text in texts]
+
+
+@pytest.fixture
 def found():
     """Return the ISO forms a queryset of samples holds, in the order of the rows."""
 
