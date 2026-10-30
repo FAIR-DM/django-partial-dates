@@ -4,10 +4,15 @@ from collections.abc import Iterable, Mapping
 from typing import Any, cast
 
 import django_filters
-from django.core.exceptions import ValidationError
+from django import forms
+from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.db.models.constants import LOOKUP_SEP
 
 from partial_dates.forms import PartialDateField, PartialDateWidget
 from partial_dates.partial_date import PartialDate
+
+COMPARISONS = ("exact", "gt", "gte", "lt", "lte")
+PARTS = ("year", "month", "day")
 
 
 class PartialDateFilterWidget(PartialDateWidget):
@@ -75,11 +80,32 @@ class PartialDateFilterField(PartialDateField):
 class PartialDateFilter(django_filters.Filter):
     """Filter a partial date column by a lookup, validating the entry as a date.
 
-    The keyword arguments are those of `django_filters.Filter`, and `years` is passed
-    to the form field.
+    The lookups are `exact`, `gt`, `gte`, `lt` and `lte`, which take a partial date,
+    and `year`, `month` and `day`, alone or followed by one of those five, which take
+    a whole number. The keyword arguments are those of `django_filters.Filter`, and
+    `years` is passed to the form field.
+
+    Args:
+        *args: Positional arguments of `django_filters.Filter`.
+        **kwargs: Keyword arguments of `django_filters.Filter`.
 
     Attributes:
         field_class: The form field that validates the entry.
+
+    Raises:
+        ImproperlyConfigured: For a lookup outside the lists above.
     """
 
-    field_class = PartialDateFilterField
+    field_class: type[forms.Field] = PartialDateFilterField
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        name, _separator, comparison = self.lookup_expr.partition(LOOKUP_SEP)
+        if name in PARTS and comparison in ("", *COMPARISONS):
+            self.field_class = forms.IntegerField
+        elif self.lookup_expr not in COMPARISONS:
+            raise ImproperlyConfigured(
+                f"PartialDateFilter does not support the lookup "
+                f"{self.lookup_expr!r}. Use one of {', '.join(COMPARISONS)}, or a "
+                f"part ({', '.join(PARTS)}) alone or followed by one of them."
+            )

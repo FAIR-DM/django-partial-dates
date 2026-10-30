@@ -1,5 +1,6 @@
 import django_filters
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 
 from partial_dates.filters import PartialDateFilter
 from tests.models import Sample
@@ -127,3 +128,95 @@ class TestPartialDateFilter:
         applied = run({}, collected=PartialDateFilter())
 
         assert None in found(applied.qs)
+
+
+class TestPartFilters:
+    @pytest.mark.parametrize("part", ["year", "month", "day"])
+    @pytest.mark.parametrize("number", [1, 5, 6, 14, 1990, 1991])
+    def test_each_finds_what_its_lookup_finds(self, grid, found, run, part, number):
+        bounded = PartialDateFilter(lookup_expr=part)
+
+        applied = run({"collected": str(number)}, collected=bounded)
+
+        plain = Sample.objects.filter(**{f"collected__{part}": number})
+        assert found(applied.qs) == found(plain)
+
+    @pytest.mark.parametrize("part", ["year", "month", "day"])
+    @pytest.mark.parametrize("comparison", ["exact", "gt", "gte", "lt", "lte"])
+    def test_a_comparison_finds_what_its_lookup_finds(
+        self, grid, found, run, part, comparison
+    ):
+        lookup = f"{part}__{comparison}"
+        bounded = PartialDateFilter(lookup_expr=lookup)
+
+        applied = run({"collected": "6"}, collected=bounded)
+
+        plain = Sample.objects.filter(**{f"collected__{lookup}": 6})
+        assert found(applied.qs) == found(plain)
+
+    def test_a_month_leaves_out_a_year(self, grid, found, run):
+        applied = run(
+            {"collected": "6"}, collected=PartialDateFilter("collected", "month")
+        )
+
+        assert found(applied.qs) == ["1990-06", "1990-06-01", "1990-06-14"]
+
+    def test_month_gte_works(self, grid, found, run):
+        bounded = PartialDateFilter(lookup_expr="month__gte")
+
+        applied = run({"collected": "6"}, collected=bounded)
+
+        assert found(applied.qs) == ["1990-06", "1990-06-01", "1990-06-14", "1990-07"]
+
+    @pytest.mark.parametrize(
+        ("part", "number"),
+        [
+            ("year", 0),
+            ("year", -1),
+            ("year", 10000),
+            ("month", 0),
+            ("month", -1),
+            ("month", 13),
+            ("day", 0),
+            ("day", -1),
+            ("day", 32),
+            ("month", 2**70),
+        ],
+    )
+    def test_a_number_no_date_holds_finds_nothing(self, grid, found, run, part, number):
+        bounded = PartialDateFilter(lookup_expr=part)
+
+        applied = run({"collected": str(number)}, collected=bounded)
+
+        assert applied.is_valid()
+        assert found(applied.qs) == []
+
+    @pytest.mark.parametrize("part", ["year", "month", "day"])
+    @pytest.mark.parametrize("text", ["1990.5", "June"])
+    def test_a_number_that_is_not_whole_is_refused(
+        self, grid, run, refusal, part, text
+    ):
+        applied = run(
+            {"collected": text}, collected=PartialDateFilter(lookup_expr=part)
+        )
+
+        assert refusal(applied) == "invalid"
+
+    @pytest.mark.parametrize(
+        "lookup",
+        [
+            "in",
+            "range",
+            "isnull",
+            "contains",
+            "startswith",
+            "month__isnull",
+            "year__in",
+            "day__range",
+            "year__month",
+            "start__gte",
+        ],
+    )
+    def test_a_lookup_outside_the_list_raises(self, lookup):
+        with pytest.raises(ImproperlyConfigured):
+            PartialDateFilter(lookup_expr=lookup)
