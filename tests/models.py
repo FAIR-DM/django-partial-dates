@@ -55,7 +55,12 @@ class Sample(models.Model):
 
 
 class Note(models.Model):
-    record = models.ForeignKey(Record, on_delete=models.CASCADE)
+    record = models.ForeignKey(
+        Record,
+        on_delete=models.CASCADE,
+        verbose_name=_("record"),
+        help_text=_("The record the note belongs to."),
+    )
     written = models.DateField(
         null=True,
         blank=True,
