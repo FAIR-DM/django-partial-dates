@@ -8,8 +8,7 @@ asserts wording or layout. No name starts with an underscore. Lines are at most 
 
 ## Phase 1: Foundational
 
-- [x] T001 The extras `django-filter` and `djangorestframework` in `pyproject.toml`, the same two
-  libraries in the dev group, and `uv.lock` (FR-001)
+- [x] T001 `django-filter` and `djangorestframework` in the dev group, and `uv.lock`
 
 ## Phase 2: User Story 1 — A developer adds partial date filters to a filter set (P1)
 
@@ -20,7 +19,9 @@ asserts wording or layout. No name starts with an underscore. Lines are at most 
 
 ### Group 1
 
-- [ ] T002 [US1] `PartialDateFilterWidget`, `PartialDateFilterField` and `PartialDateFilter` for
+- [ ] T002 [US1] The extra `django-filter` in `pyproject.toml` (FR-001, added with the module that
+  imports it, because `deptry` is red on an extra nothing uses), `PartialDateFilterWidget`,
+  `PartialDateFilterField` and `PartialDateFilter` for
   `exact`, `gt`, `gte`, `lt` and `lte`. Tests in `tests/test_filters.py`, class
   `TestPartialDateFilter`: each lookup finds what the lookup finds, parametrised over `1990`,
   `1990-06` and `1990-06-14` on both sides of bounds of each precision, compared with the queryset
@@ -88,7 +89,8 @@ asserts wording or layout. No name starts with an underscore. Lines are at most 
 
 **Independent test**: `uv run pytest tests/test_rest_framework.py`
 
-- [ ] T011 [US3] `PartialDateField` in `partial_dates/rest_framework.py`, reading. Class
+- [ ] T011 [US3] The extra `djangorestframework` in `pyproject.toml` (FR-001, with its module, as
+  T002 does), and `PartialDateField` in `partial_dates/rest_framework.py`, reading. Class
   `TestReading`: each precision reads as its ISO form, no date as `null`, an object holding ISO text
   reads as that form (US-3 1–3, FR-010)
 - [ ] T012 [US3] Writing. Class `TestWriting`: each ISO form and a `PartialDate` validate to the
@@ -113,7 +115,7 @@ asserts wording or layout. No name starts with an underscore. Lines are at most 
 
 | Requirement | Tasks |
 |---|---|
-| FR-001 | T001 |
+| FR-001 | T002, T011 |
 | FR-002 | T007, T013 |
 | FR-003 | T002 |
 | FR-004 | T003 |

@@ -159,7 +159,9 @@ to integrate with a generator. Adding one would be a third optional dependency.
 
 ## D13 — The first task was done directly
 
-Adding two extras and two lines to the dev group has no design in it, so T001 was not dispatched.
+Adding two lines to the dev group has no design in it, so T001 was not dispatched. Each extra is
+declared by the task that adds the module importing it, because `deptry` is red on an extra nothing
+uses.
 
 **ADR:** none — a packaging edit that nothing else inherits.
 
@@ -195,4 +197,3 @@ which filters they cover, and the guide states the difference. No behaviour chan
 recorded.
 
 **ADR:** none — a precision of wording in the specification, and D6 already settles the behaviour.
-
