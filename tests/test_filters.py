@@ -310,8 +310,8 @@ class TestOfferedYears:
             select = context["widget"]["subwidgets"][0]
             return [
                 str(option["value"])
-                for _group, options, _index in select["optgroups"]
-                for option in options
+                for group in select["optgroups"]
+                for option in group[1]
             ]
 
         return years
@@ -549,8 +549,8 @@ class TestPartialDateRangeFilter:
             return [
                 [
                     str(option["value"])
-                    for _group, options, _index in bound["subwidgets"][0]["optgroups"]
-                    for option in options
+                    for group in bound["subwidgets"][0]["optgroups"]
+                    for option in group[1]
                 ]
                 for bound in context["widget"]["subwidgets"]
             ]
@@ -755,32 +755,32 @@ class Page(HTMLParser):
         super().__init__()
         self.selects = {}
         self.rows = []
-        self._select = None
-        self._row = None
+        self.select = None
+        self.row = None
         self.feed(html)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         if tag == "select":
-            self._select = attrs["name"]
-            self.selects[self._select] = {"values": [], "selected": ""}
-        elif tag == "option" and self._select:
-            self.selects[self._select]["values"].append(attrs["value"])
+            self.select = attrs["name"]
+            self.selects[self.select] = {"values": [], "selected": ""}
+        elif tag == "option" and self.select:
+            self.selects[self.select]["values"].append(attrs["value"])
             if "selected" in attrs:
-                self.selects[self._select]["selected"] = attrs["value"]
+                self.selects[self.select]["selected"] = attrs["value"]
         elif tag == "li":
-            self._row = ""
+            self.row = ""
 
     def handle_endtag(self, tag):
         if tag == "select":
-            self._select = None
+            self.select = None
         elif tag == "li":
-            self.rows.append(self._row)
-            self._row = None
+            self.rows.append(self.row)
+            self.row = None
 
     def handle_data(self, data):
-        if self._row is not None:
-            self._row += data
+        if self.row is not None:
+            self.row += data
 
 
 NAMES = ["collected", "when_after", "when_before"]
@@ -877,7 +877,7 @@ class TestListPage:
     def test_an_entry_that_makes_no_sense_is_reported_with_its_code(
         self, grid, get, query, code
     ):
-        response, _page = get(query)
+        response = get(query)[0]
 
         errors = response.context["filter"].form.errors.as_data()
         assert [error.code for found in errors.values() for error in found] == [code]
