@@ -4,7 +4,8 @@ You filter, order, select and group a partial date field in the database with it
 and day, and with ranges whose bounds are partial dates. A partial date is uncertain, so a
 filter can meet a date that might or might not be what you asked for. This page says which dates
 each filter includes, so you can check a query before you rely on it, and it gives recipes for
-the other rules, including a date axis and a drilldown.
+the other rules, including a date axis and a drilldown. To offer these filters to the people
+using a site, see [filtering with django-filter](filtering.md).
 
 ## Set up the examples
 

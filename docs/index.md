@@ -13,6 +13,9 @@ holds a part nobody gave.
   or by one of its parts, and put them on a date axis with `start`.
 - [Enter a partial date](developer/forms.md) in a model form, the admin or a plain form, with a
   year, a month and a day select, giving as much of the date as the user knows.
+- [Filter a list of records](developer/filtering.md) by a date or a range of dates with
+  django-filter, giving a person the selects and an API client the ISO form, and knowing which
+  uncertain dates each filter includes.
 - [Move from django-partial-date](developer/moving-from-django-partial-date.md) with a migration
   that converts the column in place and loses no value.
 
@@ -21,6 +24,7 @@ holds a part nobody gave.
 - Python 3.12 or later
 - Django 5.2 or later
 - PostgreSQL or SQLite
+- django-filter 26.2 or later, only for the `django-filter` extra
 
 ## Installation
 

@@ -257,6 +257,34 @@ says which uncertain dates each filter includes, and gives recipes for June of a
 axis, a drilldown from year to day, and the other rules a range can follow. It also says where
 each database sorts a row holding no date, and how to choose.
 
+## Filtering with django-filter
+
+Install the `django-filter` extra to filter a list of records by a partial date. The extra adds
+django-filter and nothing else, and the core package never imports it.
+
+```console
+$ pip install "django-partial-dates[django-filter]"
+```
+
+```python
+import django_filters
+
+from partial_dates.filters import PartialDateFilter, PartialDateRangeFilter
+
+
+class SampleFilter(django_filters.FilterSet):
+    collected = PartialDateFilter()
+    when = PartialDateRangeFilter(field_name="collected")
+```
+
+A person sees the year, month and day selects and gives as much of the date as they know, and an
+API client sends the ISO form, as in `?when_after=1990-06&when_before=1991-03`. An entry that is
+not a partial date is reported as an error on the filter. The range includes the whole of the
+period its second bound names, so `1991-03` takes in `1991-03-15`. The
+[filtering guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/filtering.md)
+says which uncertain dates each filter includes, how to filter on a year, month or day and across
+a relation, and how to ask for another rule.
+
 ## Moving from django-partial-date
 
 `ConvertPartialDateField` converts a column written by django-partial-date to a

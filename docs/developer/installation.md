@@ -13,6 +13,10 @@ $ pip install django-partial-dates
 
 The package has no app to add to `INSTALLED_APPS`. It brings in Django and nothing else.
 
+To filter a list of records with django-filter, install the extra instead:
+`pip install "django-partial-dates[django-filter]"`. The [filtering guide](filtering.md) covers
+the filters it adds.
+
 ## Add the field to a model
 
 Declare `PartialDateField` as you would a `DateField`. It stores one ten-character text column,
