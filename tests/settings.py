@@ -3,7 +3,7 @@
 import os
 
 SECRET_KEY = "tests-only-not-a-secret"
-INSTALLED_APPS = ["django.contrib.contenttypes", "tests"]
+INSTALLED_APPS = ["django.contrib.contenttypes", "tests", "tests.moving"]
 if os.environ.get("TEST_DATABASE") == "postgresql":
     DATABASES = {
         "default": {
