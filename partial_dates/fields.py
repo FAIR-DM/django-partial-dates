@@ -8,6 +8,7 @@ from django.db import models
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.utils.translation import gettext_lazy as _
 
+from partial_dates import forms
 from partial_dates.lookups import Day, Month, Start, Year
 from partial_dates.partial_date import PartialDate
 
@@ -188,6 +189,17 @@ class PartialDateField(models.Field):
         if isinstance(value, PartialDate):
             return value.isoformat()
         return PartialDate.fromisoformat(value).isoformat()
+
+    def formfield(self, **kwargs: Any) -> Any:
+        """Build the form field the admin and model forms show.
+
+        Args:
+            **kwargs: Keyword arguments of `django.db.models.Field.formfield`.
+
+        Returns:
+            A `partial_dates.forms.PartialDateField`, unless `form_class` names another.
+        """
+        return super().formfield(**{"form_class": forms.PartialDateField, **kwargs})
 
     # Django types the result as str, but its serialisers write None as null.
     def value_to_string(self, obj: models.Model) -> str | None:  # type: ignore[override]

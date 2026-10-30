@@ -1,0 +1,9 @@
+{% extends "samples/base.html" %}
+{% block content %}
+<h1>{% if object %}Change{% else %}Add{% endif %} a sample</h1>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_div }}
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

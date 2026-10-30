@@ -232,6 +232,7 @@ Django's built-in fixture formats, flush, load, and compare.
 
 - The developer uses Django 5.2 LTS or the current stable release, on PostgreSQL or SQLite, as the
   constitution's stack article sets out. Other databases are not supported.
-- Until R4, a model form or the admin shows the field however Django shows a plain text field.
+- A model form or the admin shows the field as year, month and day selects, with nothing for the
+  developer to configure (FS-004).
 - A developer moving from django-partial-date waits for R5. This field does not read that
   package's columns.

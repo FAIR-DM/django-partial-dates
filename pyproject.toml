@@ -73,6 +73,9 @@ extend = "ruff-base.toml"
 # placeholder SECRET_KEY. S608: the database tests write raw SQL on purpose, with
 # quoted identifiers and bound values. S603: one test starts a fresh interpreter.
 "tests/*" = ["S101", "S105", "S603", "S608"]
+# S105, S106: the example project carries a placeholder SECRET_KEY and seeds sign-ins
+# with a known password, for use on localhost.
+"example/*" = ["S105", "S106"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
@@ -89,7 +92,7 @@ skip_empty = true
 show_missing = true
 
 [tool.deptry]
-extend_exclude = ["tests/", "docs/"]
+extend_exclude = ["tests/", "docs/", "example/"]
 
 [tool.forge.conformance]
 # tests/test_init.py tests the package's top-level module, partial_dates/__init__.py, which the
@@ -103,4 +106,7 @@ non-mirror-paths = [
     "tests/migrations/",
     "tests/fixtures/",
     "tests/conftest.py",
+    "tests/admin.py",
+    "tests/test_admin.py",
+    "tests/urls.py",
 ]

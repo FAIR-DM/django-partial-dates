@@ -26,8 +26,9 @@ the invented date from a recorded one.
 ## Status
 
 Pre-alpha. The package holds a partial date value and a model field that stores it, and the
-field filters, orders, selects and groups by year, month, day and range in the database. Form
-handling is not written yet.
+field filters, orders, selects and groups by year, month, day and range in the database. A form
+field and widget enter a partial date as a year, a month and a day select. The model field gives
+them to model forms and the admin, so there is nothing to configure.
 
 ## Usage
 
@@ -205,6 +206,36 @@ $ python manage.py loaddata samples.jsonl
 
 A fixture holding text that is not a partial date, such as `1990-6`, is refused when it is loaded.
 
+## Forms
+
+`partial_dates.forms.PartialDateField` enters a partial date in a form, with a year, a month and
+a day select. The user gives the parts they know and leaves the rest empty. It needs no entry in
+`INSTALLED_APPS` and no JavaScript.
+
+```python
+>>> from django import forms
+>>> from partial_dates.forms import PartialDateField
+>>> class EventForm(forms.Form):
+...     happened = PartialDateField()
+>>> form = EventForm({"happened_year": "1990", "happened_month": "6", "happened_day": ""})
+>>> form.is_valid()
+True
+>>> form.cleaned_data["happened"]
+PartialDate(year=1990, month=6, day=None)
+```
+
+A model form and the admin show the same selects for a `PartialDateField`, with no form or widget
+to declare. The field's `blank`, `verbose_name`, `help_text`, default and `unique` carry over. With
+nothing said, the year select lists the years from the current year down to 1900, and
+`PartialDateWidget(years=...)` names others.
+
+A day without a month is refused with the error code `incomplete`, never dropped, and a date that
+does not exist is refused with `invalid`. A form opened on a stored date selects exactly the parts
+it records. The
+[forms guide](https://github.com/FAIR-DM/django-partial-dates/blob/main/docs/developer/forms.md)
+says what each error means, how to limit the dates with a validator, and how to try the field in
+the example project on localhost.
+
 ## Querying
 
 The field filters in the database by the year, month and day of a date, and by a range whose
@@ -231,7 +262,8 @@ each database sorts a row holding no date, and how to choose.
 
 - A model field that stores a year, a year and month, or a full date in one database column.
 - A value type for those dates, which sorts, compares and hashes.
-- Lookups for filtering on them, and form handling for editing them.
+- Lookups for filtering on them, and a form field and widget for editing them, in model forms
+  and the admin as well as plain forms.
 
 **What it is not:**
 

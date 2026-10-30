@@ -1,6 +1,6 @@
 import factory
 
-from tests.models import Event, Record, Sample
+from tests.models import Event, Note, Record, Sample
 
 
 class RecordFactory(factory.django.DjangoModelFactory):
@@ -18,3 +18,10 @@ class EventFactory(factory.django.DjangoModelFactory):
 class SampleFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Sample
+
+
+class NoteFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Note
+
+    record = factory.SubFactory(RecordFactory)
