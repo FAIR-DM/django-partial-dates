@@ -3,16 +3,22 @@
 import calendar
 import dataclasses
 import datetime
+import io
+import json
 import operator
 
 import pytest
 from django.conf import settings
+from django.core.management import call_command
+from django.db import connection
 from django.template import engines
 from django.test import override_settings
 from django.utils import translation
 from django.utils.formats import date_format, number_format, reset_format_cache
 
 from partial_dates import PartialDate, Precision, Relation
+from tests.factories import RecordFactory
+from tests.models import Record
 
 
 class TestReadingTheIsoForm:
@@ -542,3 +548,45 @@ class TestDisplayFormNamesOnlyRecordedParts:
 
             assert text == date_format(datetime.date(1990, 6, 1), "YEAR_MONTH_FORMAT")
             assert text == date_format(datetime.date(1990, 6, 30), "YEAR_MONTH_FORMAT")
+
+
+class TestISOFormStays:
+    @pytest.mark.parametrize("language", ["de", "ja"])
+    @pytest.mark.parametrize(
+        ("value", "text"),
+        [
+            (PartialDate(1990), "1990"),
+            (PartialDate(1990, 6), "1990-06"),
+            (PartialDate(1990, 6, 14), "1990-06-14"),
+        ],
+    )
+    def test_str_isoformat_and_a_bare_template_variable_give_the_iso_form(
+        self, language, value, text
+    ):
+        template = engines["django"].from_string("{{ value }}")
+
+        with translation.override(language):
+            assert str(value) == text
+            assert value.isoformat() == text
+            assert template.render({"value": value}) == text
+
+    @pytest.mark.django_db
+    def test_what_is_stored_and_dumped_does_not_depend_on_the_language(self):
+        def stored_and_dumped():
+            out = io.StringIO()
+            call_command("dumpdata", "tests.Record", stdout=out)
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT date FROM tests_record")
+                return cursor.fetchall(), out.getvalue()
+
+        RecordFactory(date="1990-06")
+        with translation.override("en"):
+            english = stored_and_dumped()
+        with translation.override("de"):
+            record = Record.objects.get()
+            record.save()
+            german = stored_and_dumped()
+
+        assert german == english
+        assert english[0] == [("1990-06",)]
+        assert json.loads(english[1])[0]["fields"]["date"] == "1990-06"
