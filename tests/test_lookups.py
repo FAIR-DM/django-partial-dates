@@ -218,3 +218,22 @@ class TestYearIndex:
         found = Record.objects.filter(date__year=F("other__year"))
 
         assert list(found) == [same]
+
+
+@pytest.mark.django_db
+class TestQueryCount:
+    @pytest.mark.parametrize(
+        "lookup", [{"collected__year": 1990}, {"collected__month": 6}]
+    )
+    def test_a_part_filter_runs_one_query_for_one_row_and_for_several(
+        self, django_assert_num_queries, lookup
+    ):
+        SampleFactory(collected="1990-06")
+
+        with django_assert_num_queries(1):
+            list(Sample.objects.filter(**lookup))
+
+        SampleFactory.create_batch(4, collected="1990-06")
+
+        with django_assert_num_queries(1):
+            list(Sample.objects.filter(**lookup))
