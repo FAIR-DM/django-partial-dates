@@ -1,3 +1,4 @@
+import reversion
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -9,6 +10,7 @@ def default_reviewed():
     return PartialDate(2000, 3)
 
 
+@reversion.register()
 class Record(models.Model):
     date = PartialDateField(
         null=True,
@@ -44,6 +46,7 @@ class Event(models.Model):
     )
 
 
+@reversion.register(ignore_duplicates=True)
 class Sample(models.Model):
     collected = PartialDateField(
         null=True,

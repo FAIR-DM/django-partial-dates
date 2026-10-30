@@ -35,6 +35,8 @@ Changelog = "https://github.com/FAIR-DM/django-partial-dates/blob/main/CHANGELOG
 # ruff, mypy, deptry, pre-commit, pytest, pytest-django, coverage, django-stubs.
 dev = [
     "mvp-shared[dev,test]",
+    # The tests round-trip values through it. It is never a runtime dependency.
+    "django-reversion>=6.5.0",
     # The pre-commit template runs pydoclint, which the bundle at v0.6.0 does not carry.
     "psycopg[binary]>=3.2",
     "pydoclint>=0.10.1",

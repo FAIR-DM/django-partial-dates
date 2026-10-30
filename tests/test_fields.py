@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
+import reversion
 from django.core import serializers
 from django.core.exceptions import ValidationError
 from django.core.management import call_command
@@ -13,6 +14,7 @@ from django.db import DataError, IntegrityError, connection, transaction
 from django.db.migrations.writer import MigrationWriter
 from django.db.models import F
 from django.forms import modelform_factory
+from reversion.models import Version
 
 from partial_dates import PartialDate, PartialDateField
 from partial_dates.forms import PartialDateField as PartialDateFormField
@@ -486,6 +488,188 @@ class TestFixtures:
             call_command("loaddata", str(path), verbosity=0)
 
         assert not Record.objects.exists()
+
+
+ROUND_TRIP_VALUES = {
+    "0990": PartialDate(990),
+    "1990": PartialDate(1990),
+    "1990-01": PartialDate(1990, 1),
+    "1990-01-01": PartialDate(1990, 1, 1),
+    "2000-02-29": PartialDate(2000, 2, 29),
+    "9999-12-31": PartialDate(9999, 12, 31),
+}
+
+
+@pytest.mark.django_db
+class TestJsonSerialiser:
+    def round_trip(self, instance):
+        model = type(instance)
+        text = serializers.serialize("json", [instance])
+        model.objects.all().delete()
+        for deserialised in serializers.deserialize("json", text):
+            deserialised.save()
+        return model.objects.get(pk=instance.pk)
+
+    @pytest.mark.parametrize("text", ROUND_TRIP_VALUES)
+    def test_a_stored_value_is_written_as_its_iso_form(self, text):
+        record = RecordFactory(date=text)
+
+        written = serializers.serialize("json", Record.objects.filter(pk=record.pk))
+
+        assert json.loads(written)[0]["fields"]["date"] == text
+
+    @pytest.mark.parametrize(("text", "value"), ROUND_TRIP_VALUES.items())
+    def test_a_value_comes_back_unchanged(self, text, value):
+        record = RecordFactory(date=text)
+
+        assert self.round_trip(record).date == value
+
+    @pytest.mark.parametrize("empty", [None, ""])
+    def test_an_empty_value_comes_back_empty(self, empty):
+        record = RecordFactory(date=empty)
+
+        assert self.round_trip(record).date is None
+
+    @pytest.mark.parametrize("empty", [None, ""])
+    def test_an_unsaved_instance_holding_nothing_comes_back_empty(self, empty):
+        record = Record(pk=1, date=empty)
+
+        assert self.round_trip(record).date is None
+
+    def test_an_unsaved_instance_holding_a_value_comes_back_unchanged(self):
+        record = Record(pk=1, date=PartialDate(1990, 6), other="1991")
+
+        loaded = self.round_trip(record)
+
+        assert loaded.date == PartialDate(1990, 6)
+        assert loaded.other == PartialDate(1991)
+
+    def test_a_default_comes_back_unchanged(self, note):
+        loaded = self.round_trip(note)
+
+        assert loaded.drafted == PartialDate(1990, 6)
+        assert loaded.reviewed == PartialDate(2000, 3)
+
+
+@pytest.mark.django_db
+class TestDjangoReversion:
+    def saved_version(self, instance):
+        with reversion.create_revision():
+            instance.save()
+        return Version.objects.get_for_object(instance).first()
+
+    @pytest.mark.parametrize("text", ROUND_TRIP_VALUES)
+    def test_a_version_stores_the_iso_form(self, text):
+        version = self.saved_version(RecordFactory(date=text))
+
+        assert json.loads(version.serialized_data)[0]["fields"]["date"] == text
+
+    def test_a_version_stores_an_empty_value_as_empty(self):
+        version = self.saved_version(RecordFactory(date=None))
+
+        assert json.loads(version.serialized_data)[0]["fields"]["date"] is None
+
+    def test_a_version_of_an_instance_holding_empty_text_stores_it_as_empty(self):
+        version = self.saved_version(Record(date=""))
+
+        assert json.loads(version.serialized_data)[0]["fields"]["date"] is None
+
+    @pytest.mark.parametrize(("text", "value"), ROUND_TRIP_VALUES.items())
+    def test_a_version_gives_the_value_back(self, text, value):
+        version = self.saved_version(RecordFactory(date=text))
+
+        assert version.field_dict["date"] == value
+
+    def test_a_version_gives_an_empty_value_back_as_empty(self):
+        version = self.saved_version(RecordFactory(date=None))
+
+        assert version.field_dict["date"] is None
+
+    @pytest.mark.parametrize(("text", "value"), ROUND_TRIP_VALUES.items())
+    def test_reverting_restores_the_value(self, text, value):
+        record = RecordFactory(date=text)
+        version = self.saved_version(record)
+        Record.objects.filter(pk=record.pk).update(date=None)
+
+        version.revert()
+
+        record.refresh_from_db()
+        assert record.date == value
+
+    def test_reverting_restores_an_empty_value(self):
+        record = RecordFactory(date=None)
+        version = self.saved_version(record)
+        Record.objects.filter(pk=record.pk).update(date="1990")
+
+        version.revert()
+
+        record.refresh_from_db()
+        assert record.date is None
+
+    def test_reverting_keeps_the_precision_the_version_recorded(self):
+        record = RecordFactory(date="1990")
+        version = self.saved_version(record)
+        Record.objects.filter(pk=record.pk).update(date="1990-01-01")
+
+        version.revert()
+
+        record.refresh_from_db()
+        assert record.date == PartialDate(1990)
+
+    def test_recovering_a_deleted_row_restores_its_values(self):
+        record = RecordFactory(date="1990-06", other=None)
+        version = self.saved_version(record)
+        pk = record.pk
+        record.delete()
+
+        version.revert()
+
+        recovered = Record.objects.get(pk=pk)
+        assert recovered.date == PartialDate(1990, 6)
+        assert recovered.other is None
+
+    def test_reverting_a_revision_restores_every_row_in_it(self):
+        dated, empty = RecordFactory(date="1990"), RecordFactory(date=None)
+        with reversion.create_revision():
+            dated.save()
+            empty.save()
+        revision = Version.objects.get_for_object(dated).first().revision
+        Record.objects.filter(pk=dated.pk).update(date=None)
+        Record.objects.filter(pk=empty.pk).update(date="1991")
+
+        revision.revert()
+
+        dated.refresh_from_db()
+        empty.refresh_from_db()
+        assert dated.date == PartialDate(1990)
+        assert empty.date is None
+
+    @pytest.mark.parametrize("text", ["1990-06", None])
+    def test_saving_the_same_value_again_adds_no_version(self, text):
+        sample = SampleFactory(collected=text)
+        self.saved_version(sample)
+
+        self.saved_version(sample)
+
+        assert Version.objects.get_for_object(sample).count() == 1
+
+    def test_a_change_of_precision_alone_adds_a_version(self):
+        sample = SampleFactory(collected="1990")
+        self.saved_version(sample)
+
+        sample.collected = "1990-01-01"
+        self.saved_version(sample)
+
+        assert Version.objects.get_for_object(sample).count() == 2
+
+    def test_filling_an_empty_value_adds_a_version(self):
+        sample = SampleFactory(collected=None)
+        self.saved_version(sample)
+
+        sample.collected = "1990"
+        self.saved_version(sample)
+
+        assert Version.objects.get_for_object(sample).count() == 2
 
 
 # Each row of the two expected-results tables in the specification: the bound, the row,
