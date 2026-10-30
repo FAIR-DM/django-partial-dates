@@ -1,4 +1,7 @@
+import re
+
 import pytest
+from django.db.models import F
 
 from tests.factories import EventFactory, RecordFactory, SampleFactory
 from tests.models import Event, Record, Sample
@@ -191,3 +194,27 @@ class TestDay:
 
         assert list(Record.objects.filter(date__day=14)) == [record]
         assert not Record.objects.filter(other__day=14).exists()
+
+
+NAMES_AN_INDEX = re.compile(r"\bindex\b", re.IGNORECASE)
+
+
+@pytest.mark.django_db
+class TestYearIndex:
+    def test_year_equality_uses_the_index(self, grid, query_plan):
+        plan = query_plan(Sample.objects.filter(collected__year=1990))
+
+        assert NAMES_AN_INDEX.search(plan)
+
+    def test_month_equality_reads_the_whole_table(self, grid, query_plan):
+        plan = query_plan(Sample.objects.filter(collected__month=6))
+
+        assert not NAMES_AN_INDEX.search(plan)
+
+    def test_year_still_compares_with_another_year(self, db):
+        same = RecordFactory(date="1990-06", other="1990")
+        RecordFactory(date="1990", other="1991")
+
+        found = Record.objects.filter(date__year=F("other__year"))
+
+        assert list(found) == [same]

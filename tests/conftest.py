@@ -1,4 +1,5 @@
 import pytest
+from django.db import connection
 
 from tests.factories import EventFactory, RecordFactory, SampleFactory
 
@@ -46,3 +47,20 @@ def found():
         ]
 
     return texts
+
+
+@pytest.fixture
+def query_plan(db):
+    """Return the database's plan for a queryset, as text.
+
+    On PostgreSQL it first forbids a sequential scan inside the test's transaction, so
+    a small table cannot hide a filter that has no index path.
+    """
+
+    def plan(queryset):
+        if connection.vendor == "postgresql":
+            with connection.cursor() as cursor:
+                cursor.execute("SET LOCAL enable_seqscan = off")
+        return queryset.explain()
+
+    return plan
