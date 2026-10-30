@@ -1,12 +1,17 @@
+import os
 from datetime import datetime
 
 import pytest
-from django.db import DatabaseError, IntegrityError, connection, migrations, models
+from django.db import DatabaseError, IntegrityError, connection, models
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.graph import MigrationGraph
 
 from partial_dates import PartialDate, PartialDateField
-from partial_dates.conversion import ConvertPartialDateField, OldPartialDateField
+from partial_dates.conversion import (
+    ConvertPartialDateField,
+    OldPartialDateField,
+    RefusedValuesError,
+)
 
 OLD_TYPES = {"postgresql": "timestamp with time zone", "sqlite": "datetime"}
 
@@ -218,16 +223,6 @@ class ExcludingRouter:
 
 @pytest.mark.django_db(transaction=True)
 class TestConversionTargets:
-    @pytest.fixture
-    def migrate(self):
-        def run(state, *operations):
-            migration = migrations.Migration("0001_convert", "conv")
-            migration.operations = list(operations)
-            with connection.schema_editor(atomic=migration.atomic) as editor:
-                return migration.apply(state, editor)
-
-        return run
-
     def test_field_with_its_own_db_column(
         self,
         build_state,
@@ -344,3 +339,149 @@ class TestConversionTargets:
         assert read_column("conv_kept", "seen") == [(1, "1990")]
         assert read_column("conv_excluded", "seen") == before
         assert describe_column("conv_excluded", "seen") == column
+
+
+ON_POSTGRESQL = os.environ.get("TEST_DATABASE") == "postgresql"
+REFUSED = [
+    pytest.param("1990-06-14 13:45:37", "1990-06-14 13:45:37", id="time-of-day"),
+    pytest.param("1990-06-14 00:00:03", "1990-06-14 00:00:03", id="seconds-3"),
+    pytest.param("1990-06-14 00:00:59", "1990-06-14 00:00:59", id="seconds-59"),
+    pytest.param("1990-06-14 00:00:02.5", "1990-06-14 00:00:02.5", id="fraction"),
+    pytest.param("1990-06-14 00:00:00", "1990-06-14 00:00:00", id="year-off-jan-1"),
+    pytest.param("1990-06-14 00:00:01", "1990-06-14 00:00:01", id="month-off-first"),
+    *(
+        [
+            pytest.param("infinity", "infinity", id="infinity"),
+            pytest.param(
+                "0001-01-01 00:00:00 BC", "0001-01-01 00:00:00 BC", id="before-year-1"
+            ),
+            pytest.param(
+                "10000-01-01 00:00:00", "10000-01-01 00:00:00", id="after-year-9999"
+            ),
+        ]
+        if ON_POSTGRESQL
+        else [
+            pytest.param("1990-02-30 00:00:02", "1990-02-30 00:00:02", id="impossible"),
+            pytest.param("garbage", "garbage", id="garbage"),
+            pytest.param(
+                "1990-06-14 00:00:02 junk", "1990-06-14 00:00:02 junk", id="trailing"
+            ),
+            pytest.param(19900614, "19900614", id="number"),
+            pytest.param("", "", id="empty-text"),
+            pytest.param(
+                "1990-06-14 00:00:02+01:00",
+                "1990-06-14 00:00:02+01:00",
+                id="with-offset",
+            ),
+        ]
+    ),
+]
+
+
+@pytest.mark.django_db(transaction=True)
+class TestRefusal:
+    @pytest.fixture
+    def old_table(self, build_state, create_tables, insert_keyed):
+        def make(table, pairs, **options):
+            state = build_state(table, {"seen": OldPartialDateField(**options)})
+            create_tables(state)
+            insert_keyed(table, "seen", pairs)
+            return state
+
+        return make
+
+    @pytest.mark.parametrize(("refused", "stored"), REFUSED)
+    def test_refused_value_stops_the_migration_with_nothing_changed(
+        self,
+        old_table,
+        apply_forwards,
+        read_column,
+        describe_column,
+        refused,
+        stored,
+    ):
+        state = old_table(
+            "conv_refused",
+            [
+                (107, refused),
+                (105, "1990-01-01 00:00:00"),
+                (102, refused),
+                (109, "1990-06-14 00:00:02"),
+                (104, None),
+            ],
+            null=True,
+        )
+        rows, column = (
+            read_column("conv_refused", "seen"),
+            describe_column("conv_refused", "seen"),
+        )
+        operation = ConvertPartialDateField(
+            "thing", "seen", PartialDateField(null=True)
+        )
+
+        with pytest.raises(RefusedValuesError) as raised:
+            apply_forwards(operation, state)
+
+        assert read_column("conv_refused", "seen") == rows
+        assert describe_column("conv_refused", "seen") == column
+        assert raised.value.model == "conv.Thing"
+        assert raised.value.field == "seen"
+        assert raised.value.count == 2
+        assert raised.value.rows == [(102, stored), (107, stored)]
+
+    def test_error_carries_the_first_twenty_of_all_the_refused_values(
+        self, old_table, apply_forwards
+    ):
+        pairs = [(key, "1990-06-14 13:45:37") for key in range(140, 100, -1)]
+        state = old_table("conv_many", pairs)
+        operation = ConvertPartialDateField("thing", "seen", PartialDateField())
+
+        with pytest.raises(RefusedValuesError) as raised:
+            apply_forwards(operation, state)
+
+        assert raised.value.count == 40
+        assert [key for key, _ in raised.value.rows] == list(range(101, 121))
+
+    def test_error_is_an_exception_with_no_database_error_in_it(self):
+        assert issubclass(RefusedValuesError, Exception)
+        assert not issubclass(RefusedValuesError, DatabaseError)
+
+    def test_non_atomic_migration_leaves_the_column_unchanged(
+        self, old_table, migrate, read_column, describe_column
+    ):
+        state = old_table(
+            "conv_loose", [(101, "1990-01-01 00:00:00"), (102, "1990-06-14 13:45:37")]
+        )
+        rows, column = (
+            read_column("conv_loose", "seen"),
+            describe_column("conv_loose", "seen"),
+        )
+
+        with pytest.raises(RefusedValuesError):
+            migrate(
+                state,
+                ConvertPartialDateField("thing", "seen", PartialDateField()),
+                atomic=False,
+            )
+
+        assert read_column("conv_loose", "seen") == rows
+        assert describe_column("conv_loose", "seen") == column
+
+    def test_correcting_the_row_lets_the_migration_complete(
+        self, old_table, apply_forwards, read_column
+    ):
+        state = old_table(
+            "conv_fixed", [(101, "1990-01-01 00:00:00"), (102, "1990-06-14 13:45:37")]
+        )
+        operation = ConvertPartialDateField("thing", "seen", PartialDateField())
+        with pytest.raises(RefusedValuesError):
+            apply_forwards(operation, state)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE conv_fixed SET seen = %s WHERE id = %s",
+                ["1990-06-14 00:00:02", 102],
+            )
+
+        apply_forwards(operation, state)
+
+        assert read_column("conv_fixed", "seen") == [(101, "1990"), (102, "1990-06-14")]

@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from django.db import DatabaseError, connection, models, transaction
+from django.db import DatabaseError, connection, migrations, models, transaction
 from django.db.migrations.state import ModelState, ProjectState
 
 from partial_dates import PartialDateField
@@ -293,5 +293,31 @@ def convert(build_state, create_tables, insert_rows, apply_forwards):
             "thing", "seen", PartialDateField(**options)
         )
         return apply_forwards(operation, state)
+
+    return run
+
+
+@pytest.fixture
+def insert_keyed():
+    def insert(table, column, pairs):
+        quote = connection.ops.quote_name
+        with connection.cursor() as cursor:
+            for key, value in pairs:
+                cursor.execute(
+                    f"INSERT INTO {quote(table)} (id, {quote(column)}) VALUES (%s, %s)",
+                    [key, value],
+                )
+
+    return insert
+
+
+@pytest.fixture
+def migrate():
+    def run(state, *operations, atomic=True):
+        migration = migrations.Migration("0001_convert", APP)
+        migration.operations = list(operations)
+        migration.atomic = atomic
+        with connection.schema_editor(atomic=atomic) as editor:
+            return migration.apply(state, editor)
 
     return run

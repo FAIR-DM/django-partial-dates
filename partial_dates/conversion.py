@@ -1,17 +1,52 @@
 """Moving a column from django-partial-date to a `PartialDateField`."""
 
+import re
+from collections.abc import Iterator
 from typing import Any, cast
 
-from django.db import migrations, models
+from django.db import NotSupportedError, migrations, models
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 from django.db.backends.utils import truncate_name
 from django.db.migrations.state import ProjectState
 
+from partial_dates.partial_date import PartialDate
+
 FORWARD = (
     "CASE SUBSTR({t}, 19, 1) WHEN '0' THEN SUBSTR({t}, 1, 4) "
     "WHEN '1' THEN SUBSTR({t}, 1, 7) ELSE SUBSTR({t}, 1, 10) END"
 )
+STORED = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2}) 00:00:0([012])")
+SHOWN = 20
+BATCH = 1000
+
+
+class RefusedValuesError(Exception):
+    """Values in an old column that cannot be converted, so nothing was changed.
+
+    Args:
+        model: The label of the model, such as `"sightings.Sighting"`.
+        field: The name of the field.
+        count: The number of refused values in the column.
+        rows: The primary key and stored value of the first refused values, lowest
+            primary key first.
+
+    Attributes:
+        model: The label of the model, such as `"sightings.Sighting"`.
+        field: The name of the field.
+        count: The number of refused values in the column.
+        rows: The primary key and stored value of the first 20 refused values, lowest
+            primary key first.
+    """
+
+    def __init__(
+        self, model: str, field: str, count: int, rows: list[tuple[Any, str]]
+    ) -> None:
+        super().__init__(model, field, count, rows)
+        self.model = model
+        self.field = field
+        self.count = count
+        self.rows = rows
 
 
 class OldPartialDateField(models.Field):
@@ -85,10 +120,104 @@ class ConvertPartialDateField(migrations.AlterField):
         to_model = to_state.apps.get_model(app_label, self.model_name)
         old = from_model._meta.get_field(self.name)
         new = to_model._meta.get_field(self.name)
-        if schema_editor.connection.vendor == "postgresql":
+        vendor = schema_editor.connection.vendor
+        if vendor not in ("postgresql", "sqlite"):
+            raise NotSupportedError(
+                f"Converting a django-partial-date column needs PostgreSQL or "
+                f"SQLite, not {vendor}."
+            )
+        if not schema_editor.collect_sql:
+            self.refuse(schema_editor, from_model, old)
+        if vendor == "postgresql":
             self.convert_postgresql(schema_editor, from_model, old, new)
         else:
             self.convert_sqlite(schema_editor, from_model, old, new)
+
+    def refuse(
+        self,
+        schema_editor: BaseDatabaseSchemaEditor,
+        model: type[models.Model],
+        old: models.Field,
+    ) -> None:
+        """Stop the migration if any value in the column cannot be converted.
+
+        Args:
+            schema_editor: The editor of the database being migrated.
+            model: The model, in the state holding the old field.
+            old: The old field.
+
+        Raises:
+            RefusedValuesError: A value is not one the old field writes.
+        """
+        count, rows = 0, []
+        for key, stored in self.refused_values(schema_editor, model, old):
+            count += 1
+            if count <= SHOWN:
+                rows.append((key, stored))
+        if count:
+            raise RefusedValuesError(model._meta.label, self.name, count, rows)
+
+    def refused_values(
+        self,
+        schema_editor: BaseDatabaseSchemaEditor,
+        model: type[models.Model],
+        old: models.Field,
+    ) -> Iterator[tuple[Any, str]]:
+        """Read the column as stored and yield each value that cannot be converted.
+
+        Args:
+            schema_editor: The editor of the database being migrated.
+            model: The model, in the state holding the old field.
+            old: The old field.
+
+        Yields:
+            The primary key and stored text of each refused value, in primary key
+            order. A `NULL` is never refused.
+        """
+        connection = schema_editor.connection
+        quote = connection.ops.quote_name
+        column = quote(old.db_column or old.attname)
+        stored = (
+            f"{column}::timestamp::text"
+            if connection.vendor == "postgresql"
+            else f"CAST({column} AS TEXT)"
+        )
+        key = quote(cast(str, model._meta.pk.column))
+        table = quote(model._meta.db_table)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"SELECT {key}, {stored} FROM {table} "  # noqa: S608
+                f"WHERE {column} IS NOT NULL ORDER BY {key}"
+            )
+            while batch := cursor.fetchmany(BATCH):
+                for pk, text in batch:
+                    if not self.converts(text):
+                        yield pk, text
+
+    @staticmethod
+    def converts(text: str) -> bool:
+        """Say whether a stored timestamp is exactly what the old field writes.
+
+        Args:
+            text: The stored timestamp as text.
+
+        Returns:
+            `True` when the time is 00:00:00, 00:00:01 or 00:00:02, the date exists
+            in the years 1 to 9999, and the time agrees with the date's precision.
+        """
+        match = STORED.fullmatch(text)
+        if match is None:
+            return False
+        year, month, day, precision = (int(part) for part in match.groups())
+        if precision == 0 and (month, day) != (1, 1):
+            return False
+        if precision == 1 and day != 1:
+            return False
+        try:
+            PartialDate(year, month, day)
+        except ValueError:
+            return False
+        return True
 
     def convert_postgresql(
         self,
@@ -111,6 +240,7 @@ class ConvertPartialDateField(migrations.AlterField):
         column_name = old.db_column or old.attname
         column = quote(column_name)
         parameters = new.db_parameters(connection)
+        collation = quote(cast(str, parameters["collation"]))
         name = truncate_name(
             f"{table}_{column_name}_check", connection.ops.max_name_length()
         )
@@ -119,7 +249,7 @@ class ConvertPartialDateField(migrations.AlterField):
         schema_editor.alter_field(model, old, unindexed_old)
         schema_editor.execute(
             f"ALTER TABLE {quote(table)} ALTER COLUMN {column} "
-            f"TYPE {parameters['type']} COLLATE {quote(cast(str, parameters['collation']))} "
+            f"TYPE {parameters['type']} COLLATE {collation} "
             f"USING {FORWARD.format(t=f'{column}::timestamp::text')}, "
             f"ADD CONSTRAINT {quote(name)} CHECK ({new.db_check(connection)})",
             None,
