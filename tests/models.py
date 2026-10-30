@@ -61,12 +61,6 @@ class Note(models.Model):
         verbose_name=_("record"),
         help_text=_("The record the note belongs to."),
     )
-    written = models.DateField(
-        null=True,
-        blank=True,
-        verbose_name=_("written"),
-        help_text=_("The day the note was written."),
-    )
     drafted = PartialDateField(
         default=PartialDate(1990, 6),
         verbose_name=_("drafted"),

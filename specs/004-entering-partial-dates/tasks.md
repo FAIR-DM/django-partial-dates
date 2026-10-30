@@ -16,7 +16,7 @@ layout or appearance. No name starts with an underscore. Line length is 88.
 
 ### Group 1
 
-- [ ] T001 [US1] `PartialDateWidget` and `PartialDateField` in `partial_dates/forms.py`, as `plan.md`
+- [x] T001 [US1] `PartialDateWidget` and `PartialDateField` in `partial_dates/forms.py`, as `plan.md`
   describes. Tests in `tests/test_forms.py`: `TestEntering`, a year, a year and month, and a full date
   give the value at that precision, on a required and an optional field (US-1 1–3); a required field
   offers an empty choice in all three selects and selects no year on a blank form (US-1 4); all empty
@@ -24,7 +24,7 @@ layout or appearance. No name starts with an underscore. Line length is 88.
   ISO text opens with exactly its parts selected (US-1 5); adding and emptying parts changes the
   precision (US-1 6, 7); unchanged parts leave `changed_data` empty and the value equal, at each
   precision (US-1 8); a year outside the offered years is selected and survives a submission (US-1 15)
-- [ ] T002 [US1] Tests in `tests/test_forms.py`, `TestRefusing`: a day with no month and a part with no
+- [x] T002 [US1] Tests in `tests/test_forms.py`, `TestRefusing`: a day with no month and a part with no
   year give `incomplete` (US-1 11, 12); 30 February, `1900-02-29` and month `13` give `invalid`, and
   `2000-02-29` is accepted (US-1 13); text, year `0`, and a 5,000-digit year give `invalid`, with no
   exception (US-1 16), and month `0` with a day gives `invalid`; a refused entry re-renders with each
@@ -33,13 +33,13 @@ layout or appearance. No name starts with an underscore. Line length is 88.
   FR-004). `TestEveryCombination`, parametrised over
   empty, valid and impossible values of each part: each entry is either the value with exactly those
   parts or an error with a code (SC-002)
-- [ ] T003 [US1] Tests in `tests/test_forms.py`, `TestAcrossLanguages`: under `translation.override`
+- [x] T003 [US1] Tests in `tests/test_forms.py`, `TestAcrossLanguages`: under `translation.override`
   with a day-first and a year-first language the selects keep the order year, month, day, and each
   month's label equals `MONTHS` in that language (US-1 17, FR-011). `TestAssistiveUse`: each select has
   a distinct non-empty `aria-label`, the field renders in a `fieldset` with its label as the `legend`,
   and the year is the first select (US-1 18). `TestNoScript`: `Form.media` is empty and the render holds
   no script (US-1 19). The new messages go in `partial_dates/locale/en/LC_MESSAGES/django.po`
-- [ ] T004 [US1] `docs/developer/forms.md`, first half: what a user sees, what each error code means,
+- [x] T004 [US1] `docs/developer/forms.md`, first half: what a user sees, what each error code means,
   declaring the field on a plain form. `docs/developer/index.md`, `docs/index.md`, `README.md` (status
   and a usage section) and `CHANGELOG.md`. `tests/test_guide.py` gains a test running the page's `>>>`
   examples. Both public names are quoted
@@ -55,7 +55,7 @@ the same on PostgreSQL.
 
 ### Group 1
 
-- [ ] T005 [US2] `formfield()` in `partial_dates/fields.py`. Tests in `tests/test_fields.py`,
+- [x] T005 [US2] `formfield()` in `partial_dates/fields.py`. Tests in `tests/test_fields.py`,
   `TestFormField`, using a `ModelForm` on `Record` and `Event`: nothing declared gives the three selects
   and saving stores the value at each precision, and editing a row moves it between precisions and
   saves unchanged without a change (US-2 1, SC-001, SC-003); `blank`, `verbose_name` and `help_text`
@@ -64,14 +64,14 @@ the same on PostgreSQL.
   `initial-reviewed` leaving `changed_data` without it (US-2 5, FR-008); a duplicate on `Event.occurred` gives `unique` on the field (US-2 6); a
   validator on the model field and on the form field receives a `PartialDate`, and its error is on the
   field (US-2 7)
-- [ ] T006 [US2] `tests/settings.py`, `tests/admin.py`, `tests/urls.py`, `Note` with its factory,
+- [x] T006 [US2] `tests/settings.py`, `tests/admin.py`, `tests/urls.py`, `Note` with its factory,
   fixture, factory test and migration, and `pyproject.toml`, as `plan.md` describes. `makemigrations
   --check` stays clean. Tests in `tests/test_admin.py`: a staff user adds and changes
   a `Record` with the admin client, year only and full, with a `Note` inline, and the rows hold those
   values; an unchanged save records that nothing changed; a day with no month redisplays with the error
   on the field and saves nothing; text in a part returns the change form, status 200, with the `invalid` error on the
   field (US-2 2, SC-004)
-- [ ] T007 [US2] Tests in `tests/test_forms.py`: `TestDeclaring`, a form with no model cleans to a value
+- [x] T007 [US2] Tests in `tests/test_forms.py`: `TestDeclaring`, a form with no model cleans to a value
   or `None` (US-2 3). `TestOfferedYears`, the default runs from today's year to 1900, newest first
   (US-2 8), `years` changes one field and not another (US-2 9), a year outside `years` is still accepted
   (FR-017), and the list follows the clock on a form class already defined (US-2 10). `TestSeveralFields`,
@@ -80,10 +80,10 @@ the same on PostgreSQL.
   Edge cases: `990` records `0990`, a stored `0990` opens selected, a part left out of the submission
   reads as empty. A `years` generator still lists its years on a second render. A hand-edited
   `initial-<name>` on an extra formset form raises nothing (SC-002)
-- [ ] T008 [US2] `example/`, `.gitignore` and `pyproject.toml`, as `plan.md` describes. Check by hand:
+- [x] T008 [US2] `example/` and `pyproject.toml`, as `plan.md` describes. Check by hand:
   `migrate`, `seed` run twice, then `runserver`, with each page answering. `uv build` leaves `example/`
   out of the wheel and the sdist
-- [ ] T009 [US2] `docs/developer/forms.md`, second half: model forms, the admin, naming the years, a
+- [x] T009 [US2] `docs/developer/forms.md`, second half: model forms, the admin, naming the years, a
   limit as a validator, translating the messages, running the example on localhost, with its seeded
   sign-ins stated to be for local use. `README.md` scope, the R4 line in
   `docs/ROADMAP.md`, worded `delivered in [#19](...)` as R1 to R3 are, `CHANGELOG.md`, and the assumption in `specs/002-model-field/spec.md` (D13)

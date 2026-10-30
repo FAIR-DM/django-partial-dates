@@ -1,12 +1,13 @@
-"""Settings for the example project, which is for use on localhost only."""
+"""Settings for the example project, which is for local use only."""
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "example-project-only-not-a-secret"
 DEBUG = True
-ALLOWED_HOSTS: list[str] = []
+ALLOWED_HOSTS = os.environ.get("EXAMPLE_ALLOWED_HOSTS", "").split()
 
 INSTALLED_APPS = [
     "django.contrib.admin",

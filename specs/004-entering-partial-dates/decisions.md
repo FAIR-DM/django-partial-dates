@@ -207,3 +207,16 @@ No blocking finding.
   wording for the roadmap.
 
 **ADR:** none — corrections to this feature's plan.
+
+## D20 — Choices made during the build
+
+- A year shown only because it is stored or posted goes after the offered years, not sorted into
+  them. The list is the developer's, in the developer's order.
+- `Note` was added first, because the `formfield()` tests need its defaults.
+- The example project reads `EXAMPLE_ALLOWED_HOSTS`, so it can be reached under a host name other
+  than localhost, and stays on localhost when that is not set.
+- Existing test modules only gained additions: the import lines of `tests/conftest.py`,
+  `tests/factories.py`, `tests/test_factories.py` and `tests/test_guide.py` changed to name `Note`
+  and `Record`, and `tests/settings.py` gained the admin.
+
+**ADR:** none — local to this feature's code and tests.

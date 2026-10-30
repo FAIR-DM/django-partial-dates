@@ -27,7 +27,6 @@ def record_post(date=None, note=None, defaulted=None):
         "note_set-MAX_NUM_FORMS": "1000",
         "note_set-0-id": "",
         "note_set-0-record": "",
-        "note_set-0-written": "",
         **part("note_set-0-drafted", "1990", "6"),
         **part("note_set-0-reviewed", "2000", "3"),
         "initial-note_set-0-reviewed": "2000-03",

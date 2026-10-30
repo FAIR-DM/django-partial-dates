@@ -93,8 +93,7 @@ def formfield(self, **kwargs):
 
 - `tests/settings.py` gains `django.contrib.admin`, `auth`, `sessions`, `messages`, `MIDDLEWARE`,
   `TEMPLATES` and `ROOT_URLCONF = "tests.urls"`. `partial_dates` stays out of `INSTALLED_APPS`.
-- `tests/models.py` gains `Note`, with a foreign key to `Record`, an optional `written` date for the
-  inline, `drafted` defaulting to `PartialDate(1990, 6)` and `reviewed` defaulting to a callable, each
+- `tests/models.py` gains `Note`, with a foreign key to `Record` for the inline, `drafted` defaulting to `PartialDate(1990, 6)` and `reviewed` defaulting to a callable, each
   with `verbose_name` and `help_text`. `NoteFactory`, a `note` fixture and a class in
   `tests/test_factories.py` go with it. `tests/migrations/0003_note.py` is made with
   `makemigrations tests`.
@@ -117,7 +116,7 @@ one app:
   with the email addresses `<name>@example.com` and the password `password`, and a sample at each
   precision, one in 1850 and one in 0990.
 
-`.gitignore` gains `*.sqlite3`. `pyproject.toml` adds `example/` to deptry's `extend_exclude`, and a
+`.gitignore` already covers its database. `pyproject.toml` adds `example/` to deptry's `extend_exclude`, and a
 ruff per-file ignore for its placeholder secret and seeded passwords.
 
 ### Documentation
