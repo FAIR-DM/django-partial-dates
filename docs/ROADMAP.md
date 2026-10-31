@@ -10,14 +10,16 @@ This document was designed against
 
 ## Versioning
 
-Releases are gated on goal importance, not on a count of features.
+`0.1.0` is released first, once the Essential goals are delivered. Releases after that follow the
+issues that projects using the package file, and `1.0.0` comes when those issues slow and the API is
+considered stable.
 
 | Version | Gate |
 |---|---|
 | `0.0.x` | Building toward the Essential goals. Pre-viable, expect churn, nothing published |
 | `0.1.0` | All Essential goals delivered. The minimum usable release, and the first publish |
-| `0.1.x` → `0.x` | Advancing the Expected goals, at whatever granularity the work takes |
-| `1.0.0` | All Expected goals delivered. The complete, dependable release |
+| `0.1.x` → `0.x` | Further releases follow the issues that consuming projects file. The Expected and Aspirational goals are delivered along the way, as those issues call for them |
+| `1.0.0` | Issues from consuming projects have slowed and the API is considered stable |
 | `1.x` | Stable line: fixes and additive features only |
 | `2.0` | The next major, where breaking changes go |
 
@@ -105,9 +107,10 @@ waiting to do it. The conversion ships here once, so each project's own migratio
 - A how-to guide for the move, including swapping the field in existing migrations so they no
   longer import django-partial-date
 
-## Expected goals: v1.0.0
+## Expected goals
 
-The breadth that makes the package dependable rather than merely usable.
+The breadth that makes the package dependable rather than merely usable. These ship in the
+releases after `0.1.0`, in the order consuming projects need them.
 
 ### R6 — Showing a partial date to a reader
 
