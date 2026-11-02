@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [v0.1.0] - 2026-11-02
+
 ### Added
 
 - `PartialDate`, an immutable value for a date known to the year, the month or the day, and

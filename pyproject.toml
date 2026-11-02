@@ -1,6 +1,6 @@
 [project]
 name = "django-partial-dates"
-version = "0.0.1"
+version = "0.1.0"
 description = "A Django model field for dates known to the year, the month or the day"
 authors = [{ name = "Sam Jennings" }]
 license = "MIT"
